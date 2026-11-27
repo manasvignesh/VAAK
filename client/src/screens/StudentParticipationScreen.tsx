@@ -38,19 +38,19 @@ export function StudentParticipationScreen({
   const [rate, setRate] = useState<number>(1.0);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:py-8">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Student Participation Mode</h1>
-          <p className="text-sm text-[var(--mv-text-muted)]">
-            Type or select a phrase to display it clearly and read it aloud to the classroom.
+          <h1 className="text-3xl font-bold tracking-tight">Student Participation Console</h1>
+          <p className="mt-1 text-sm font-medium text-[var(--mv-text-muted)]">
+            Type or tap a phrase to display it clearly and speak aloud to the classroom.
           </p>
         </div>
         {hasActiveSession && (
           <button
             type="button"
             onClick={onBackToClassroom}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--mv-border)] bg-[var(--mv-surface)] px-4 py-2 text-sm font-semibold hover:bg-[var(--mv-surface-alt)]"
+            className="nb-btn inline-flex min-h-11 items-center gap-2 bg-[var(--mv-surface)] px-4 py-2 text-sm font-bold"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             <span>Back to Live Classroom</span>
@@ -61,7 +61,7 @@ export function StudentParticipationScreen({
       {!ttsSupported && (
         <div
           role="alert"
-          className="mb-4 rounded-xl border border-[var(--mv-amber)] bg-[var(--mv-amber-bg)] p-4 text-sm text-[var(--mv-amber)]"
+          className="nb-card mb-5 bg-[var(--mv-amber)] p-4 text-sm font-bold text-[#151515]"
         >
           Your browser does not support Speech Synthesis. You can still type your question below
           and show the large-text display card to your teacher or classmates.
@@ -69,25 +69,34 @@ export function StudentParticipationScreen({
       )}
 
       <div className="grid gap-6 md:grid-cols-5">
-        <div className="space-y-5 rounded-2xl border border-[var(--mv-border)] bg-[var(--mv-surface)] p-5 md:col-span-3">
+        <div className="nb-card-lg space-y-5 bg-[var(--mv-surface)] p-5 md:col-span-3">
           <div>
-            <span className="block text-sm font-semibold">Quick Classroom Phrases</span>
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {QUICK_PHRASES.map((phrase) => (
-                <button
-                  key={phrase}
-                  type="button"
-                  onClick={() => setQuestionText(phrase)}
-                  className="min-h-10 rounded-xl border border-[var(--mv-border)] bg-[var(--mv-bg)] px-3 py-2 text-left text-sm font-medium hover:border-[var(--mv-accent)] hover:bg-[var(--mv-accent-soft)]/40"
-                >
-                  {phrase}
-                </button>
-              ))}
+            <span className="block text-sm font-bold uppercase tracking-wide">
+              Quick Classroom Phrases
+            </span>
+            <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+              {QUICK_PHRASES.map((phrase) => {
+                const selected = questionText === phrase;
+                return (
+                  <button
+                    key={phrase}
+                    type="button"
+                    onClick={() => setQuestionText(phrase)}
+                    className={`nb-btn min-h-12 px-3.5 py-2.5 text-left text-sm font-bold ${
+                      selected
+                        ? 'bg-[var(--mv-lavender)] text-[#151515]'
+                        : 'bg-[var(--mv-bg)] text-[var(--mv-text)]'
+                    }`}
+                  >
+                    {phrase}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div>
-            <label htmlFor="student-question-input" className="block text-sm font-semibold">
+            <label htmlFor="student-question-input" className="block text-sm font-bold">
               Your Question or Message
             </label>
             <textarea
@@ -96,20 +105,20 @@ export function StudentParticipationScreen({
               value={questionText}
               onChange={(e) => setQuestionText(e.target.value)}
               placeholder="Type your question for the teacher..."
-              className="mt-1.5 w-full rounded-xl border border-[var(--mv-border)] bg-[var(--mv-bg)] p-3 text-base"
+              className="mt-1.5 w-full rounded-xl border-[2.5px] border-[var(--mv-border)] bg-[var(--mv-bg)] p-3 text-base font-medium"
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="tts-lang-select" className="block text-sm font-semibold">
+              <label htmlFor="tts-lang-select" className="block text-sm font-bold">
                 Voice Language
               </label>
               <select
                 id="tts-lang-select"
                 value={lang}
                 onChange={(e) => setLang(e.target.value as 'en-IN' | 'hi-IN' | 'te-IN')}
-                className="mt-1.5 w-full rounded-xl border border-[var(--mv-border)] bg-[var(--mv-bg)] px-3 py-2.5 text-sm font-semibold"
+                className="mt-1.5 w-full rounded-xl border-[2.5px] border-[var(--mv-border)] bg-[var(--mv-bg)] px-3 py-2.5 text-sm font-bold"
               >
                 <option value="en-IN">Indian English (en-IN)</option>
                 <option value="hi-IN">Hindi (hi-IN)</option>
@@ -118,7 +127,7 @@ export function StudentParticipationScreen({
             </div>
 
             <div>
-              <div className="flex items-center justify-between text-sm font-semibold">
+              <div className="flex items-center justify-between text-sm font-bold">
                 <label htmlFor="tts-rate-range">Speaking Speed</label>
                 <span className="font-mono">{rate.toFixed(2)}x</span>
               </div>
@@ -130,7 +139,7 @@ export function StudentParticipationScreen({
                 step="0.05"
                 value={rate}
                 onChange={(e) => setRate(Number.parseFloat(e.target.value))}
-                className="mt-3 w-full accent-[var(--mv-accent)]"
+                className="mt-3 w-full accent-[var(--mv-border)]"
               />
             </div>
           </div>
@@ -140,7 +149,7 @@ export function StudentParticipationScreen({
               type="button"
               disabled={!questionText.trim() || ttsStatus === 'speaking'}
               onClick={() => onSpeak(questionText, lang, rate)}
-              className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--mv-accent)] px-6 py-3 text-base font-semibold text-[var(--mv-accent-text)] hover:bg-[var(--mv-accent-hover)] disabled:opacity-50"
+              className="nb-btn inline-flex min-h-13 items-center gap-2 bg-[var(--mv-lime)] px-6 py-3 text-base font-bold text-[#151515] disabled:opacity-50"
             >
               <Volume2 className="h-5 w-5" aria-hidden="true" />
               <span>Speak Aloud</span>
@@ -150,7 +159,7 @@ export function StudentParticipationScreen({
               type="button"
               disabled={ttsStatus !== 'speaking'}
               onClick={onStopSpeaking}
-              className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-[var(--mv-danger)] bg-[var(--mv-danger-bg)] px-5 py-3 text-base font-semibold text-[var(--mv-danger)] disabled:opacity-40"
+              className="nb-btn inline-flex min-h-13 items-center gap-2 bg-[var(--mv-danger)] px-5 py-3 text-base font-bold text-[#151515] disabled:opacity-40"
             >
               <Square className="h-4 w-4" aria-hidden="true" />
               <span>Stop Speaking</span>
@@ -159,10 +168,10 @@ export function StudentParticipationScreen({
         </div>
 
         {/* Visible Question Display Card & Honest Playback Status */}
-        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-[var(--mv-border)] bg-[var(--mv-surface)] p-5 md:col-span-2">
+        <div className="nb-card-lg flex flex-col justify-between gap-4 bg-[var(--mv-surface)] p-5 md:col-span-2">
           <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--mv-text-muted)]">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
                 <MessageSquare className="h-4 w-4" aria-hidden="true" />
                 Visible Question Card
               </span>
@@ -190,8 +199,8 @@ export function StudentParticipationScreen({
               />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[var(--mv-border)] bg-[var(--mv-bg)] p-5">
-              <p className="text-2xl font-semibold leading-snug">
+            <div className="nb-card mt-4 bg-[var(--mv-pink)] p-5 text-[#151515]">
+              <p className="text-2xl font-bold leading-snug">
                 {questionText.trim() || 'Your question will appear here in large text.'}
               </p>
             </div>
@@ -199,9 +208,9 @@ export function StudentParticipationScreen({
 
           <div
             role="status"
-            className="rounded-xl border border-[var(--mv-border)] bg-[var(--mv-surface-alt)] p-3.5 text-xs leading-relaxed text-[var(--mv-text-muted)]"
+            className="rounded-xl border-2 border-[var(--mv-border)] bg-[var(--mv-surface-alt)] p-3.5 text-xs font-medium leading-relaxed"
           >
-            <strong className="block text-[var(--mv-text)]">Playback &amp; Mic Safety:</strong>
+            <strong className="block font-bold">Playback &amp; Mic Safety:</strong>
             {ttsStatusDetail ||
               'Classroom microphone capture automatically pauses during speech playback so your question does not trigger teacher voice commands.'}
           </div>

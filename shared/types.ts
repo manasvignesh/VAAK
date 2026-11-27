@@ -30,6 +30,7 @@ export interface AccessibilitySettings {
   confidenceThreshold: number; // Default 0.6 (configurable, not a clinical threshold)
   autoScroll: boolean;
   commandListeningEnabled: boolean;
+  focusMode?: boolean;
 }
 
 export interface WordToken {

@@ -99,5 +99,9 @@ describe('parseVoiceCommand', () => {
     expect(isStandaloneWakeWord('MyVoice!')).toBe(true);
     expect(isStandaloneWakeWord('This is my voice.')).toBe(false);
     expect(isStandaloneWakeWord('Let us walk outside.')).toBe(false);
+
+    const catchMeUp = parseVoiceCommand('VAAK, catch me up.', true);
+    expect(catchMeUp.recognized).toBe(true);
+    expect(catchMeUp.action).toEqual({ type: 'summarize_so_far' });
   });
 });

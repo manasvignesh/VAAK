@@ -26,10 +26,10 @@ export function TopNav({
   ];
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--mv-border)] bg-[var(--mv-surface)] shadow-[var(--mv-shadow-sm)]">
+    <header className="sticky top-0 z-30 border-b-[3px] border-[var(--mv-border)] bg-[var(--mv-surface)]">
       <a
         href="#main-content"
-        className="visually-hidden rounded-lg bg-[var(--mv-accent)] px-4 py-2 font-semibold text-[var(--mv-accent-text)] focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50"
+        className="nb-btn visually-hidden bg-[var(--mv-lime)] px-4 py-2 font-bold text-[#151515] focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50"
       >
         Skip to main content
       </a>
@@ -41,29 +41,28 @@ export function TopNav({
             onClick={() => onNavigate('home')}
             className="flex items-center gap-2.5 rounded-xl px-1 py-1 text-left"
           >
-            <VaakMark className="h-9 w-9 shrink-0" />
+            <VaakMark className="h-10 w-10 shrink-0" />
             <span>
-              <span className="block text-base font-bold tracking-tight leading-tight">VAAK</span>
-              <span className="block text-xs text-[var(--mv-text-muted)]">
+              <span className="block text-lg font-bold tracking-tight leading-none">VAAK</span>
+              <span className="block text-xs font-semibold text-[var(--mv-text-muted)]">
                 Communication Without Barriers
               </span>
             </span>
           </button>
 
           {isLiveOrDemoActive && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--mv-border)] bg-[var(--mv-surface-alt)] px-2.5 py-1 text-xs font-semibold">
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  isDemoMode ? 'bg-[var(--mv-amber)]' : 'bg-[var(--mv-danger)]'
-                }`}
-                aria-hidden="true"
-              />
-              {isDemoMode ? 'Demo Active' : 'Live Session'}
+            <span
+              className={`nb-pill inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-[#151515] ${
+                isDemoMode ? 'bg-[var(--mv-lavender)]' : 'bg-[var(--mv-lime)]'
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-[#151515]" aria-hidden="true" />
+              {isDemoMode ? 'DEMO ACTIVE' : 'LIVE'}
             </span>
           )}
         </div>
 
-        <nav aria-label="Primary" className="flex flex-wrap items-center gap-1.5">
+        <nav aria-label="Primary" className="flex flex-wrap items-center gap-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = currentScreen === item.id;
@@ -73,10 +72,10 @@ export function TopNav({
                 type="button"
                 aria-current={active ? 'page' : undefined}
                 onClick={() => onNavigate(item.id)}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+                className={`nb-btn inline-flex min-h-10 items-center gap-2 px-3.5 py-2 text-sm font-bold ${
                   active
-                    ? 'bg-[var(--mv-accent)] text-[var(--mv-accent-text)]'
-                    : 'text-[var(--mv-text)] hover:bg-[var(--mv-surface-alt)]'
+                    ? 'bg-[var(--mv-lime)] text-[#151515]'
+                    : 'bg-[var(--mv-surface)] text-[var(--mv-text)] hover:bg-[var(--mv-surface-alt)]'
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -89,7 +88,7 @@ export function TopNav({
             type="button"
             onClick={onOpenAccessibility}
             aria-label="Open accessibility settings"
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--mv-border)] px-3 py-2 text-sm font-semibold hover:bg-[var(--mv-surface-alt)]"
+            className="nb-btn inline-flex min-h-10 items-center gap-2 bg-[var(--mv-pink)] px-3.5 py-2 text-sm font-bold text-[#151515]"
           >
             <Accessibility className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Accessibility</span>

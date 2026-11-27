@@ -30,6 +30,7 @@ import {
   getDemoTranslation,
 } from './services/demoEngine';
 import { buildLocalBasicNotes } from './services/localNotesFallback';
+import { buildDeterministicCatchMeUp, type CatchMeUpResult } from './services/catchMeUp';
 import { TopNav } from './components/TopNav';
 import { LiveRegion } from './components/LiveRegion';
 import { ConsentModal } from './components/ConsentModal';
@@ -60,6 +61,8 @@ export function App() {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [interimText, setInterimText] = useState('');
   const [micLevel, setMicLevel] = useState(0);
+  const [commandPulseKey, setCommandPulseKey] = useState(0);
+  const [catchMeUp, setCatchMeUp] = useState<CatchMeUpResult | null>(null);
   const [statusMessage, setStatusMessage] = useState('Ready');
   const [commandFeedback, setCommandFeedback] = useState<{
     tone: 'success' | 'warning' | 'info';
@@ -337,6 +340,7 @@ export function App() {
       const parsed = parseVoiceCommand(candidateText, settings.commandListeningEnabled);
 
       if (parsed.recognized && parsed.action) {
+        setCommandPulseKey((k) => k + 1);
         const cmdSeg: TranscriptSegment = {
           id: nextSegmentId(),
           sessionId: current.id,
@@ -409,13 +413,12 @@ export function App() {
             setCommandFeedback({ tone: 'warning', message: 'No previous explanation to translate.' });
           }
         } else if (action.type === 'summarize_so_far') {
-          const hlCount = educational.filter((s) => s.highlightType).length;
-          const bmCount = educational.filter((s) => s.isBookmarked).length;
           const updated = { ...current, segments: [...current.segments, cmdSeg] };
           setActiveSession(updated);
+          setCatchMeUp(buildDeterministicCatchMeUp(updated.segments, updated.isDemo));
           setCommandFeedback({
             tone: 'info',
-            message: `Summary so far: ${educational.length} finalized explanations, ${hlCount} highlights, and ${bmCount} bookmarks.`,
+            message: 'Catch Me Up summary generated from recent classroom explanations.',
           });
         } else if (action.type === 'end_class_and_notes') {
           const updated = { ...current, segments: [...current.segments, cmdSeg] };
@@ -760,9 +763,17 @@ export function App() {
         {screen === 'home' && (
           <HomeScreen
             capabilities={capabilities}
-            savedSessionCount={savedSessions.length}
+            savedSessions={savedSessions}
+            reducedMotion={settings.reducedMotion}
+            recordingState={recordingState}
             onStartLiveClass={() => setConsentOpen(true)}
             onStartDemo={startDemoSession}
+            onOpenSession={(sess) => {
+              setActiveSession(sess);
+              setRecordingState('completed');
+              setCatchMeUp(null);
+              setScreen(sess.notes ? 'notes' : 'classroom');
+            }}
             onNavigate={setScreen}
             onOpenAccessibility={() => setA11yOpen(true)}
           />
@@ -774,8 +785,18 @@ export function App() {
             interimText={interimText}
             recordingState={recordingState}
             micLevel={micLevel}
+            commandPulseKey={commandPulseKey}
             statusMessage={statusMessage}
             commandFeedback={commandFeedback}
+            catchMeUp={catchMeUp}
+            onTriggerCatchMeUp={() => {
+              if (!activeSession) return;
+              setCatchMeUp(
+                buildDeterministicCatchMeUp(activeSession.segments, activeSession.isDemo)
+              );
+              setPoliteAnnouncement('Catch Me Up summary updated.');
+            }}
+            onDismissCatchMeUp={() => setCatchMeUp(null)}
             settings={settings}
             onUpdateSettings={updateSettings}
             onStopRecording={() => {

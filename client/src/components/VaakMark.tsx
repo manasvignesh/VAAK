@@ -1,4 +1,4 @@
-export function VaakMark({ className = 'h-9 w-9' }: { className?: string }) {
+export function VaakMark({ className = 'h-10 w-10' }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -7,23 +7,31 @@ export function VaakMark({ className = 'h-9 w-9' }: { className?: string }) {
       aria-hidden="true"
       className={className}
     >
-      <rect width="32" height="32" rx="8" fill="var(--mv-accent)" />
+      <rect
+        x="2"
+        y="2"
+        width="28"
+        height="28"
+        rx="6"
+        fill="#C5F36B"
+        stroke="#151515"
+        strokeWidth="2.5"
+      />
       <path
-        d="M8.5 10.5L14.5 22L16 19"
-        stroke="var(--mv-accent-text)"
-        strokeWidth="2.4"
+        d="M9 10.5L15 22L16.5 18.5"
+        stroke="#151515"
+        strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M23.5 10.5L17.5 22"
-        stroke="currentColor"
-        strokeOpacity="0.65"
-        strokeWidth="2.4"
+        d="M23 10.5L17 22"
+        stroke="#151515"
+        strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="16" cy="9.5" r="1.75" fill="var(--mv-accent-text)" />
+      <circle cx="16" cy="9" r="2" fill="#C5B8FF" stroke="#151515" strokeWidth="1.5" />
     </svg>
   );
 }

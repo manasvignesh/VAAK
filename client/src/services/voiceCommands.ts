@@ -103,8 +103,11 @@ export function parseVoiceCommand(
     };
   }
 
-  // 5. Summarize so far
-  if (/\bsummarize\b/i.test(lower) && /\b(covered|so far|class|lesson)\b/i.test(lower)) {
+  // 5. Summarize so far / Catch me up
+  if (
+    (/\bsummarize\b/i.test(lower) && /\b(covered|so far|class|lesson)\b/i.test(lower)) ||
+    /\bcatch\s+me\s+up\b/i.test(lower)
+  ) {
     return {
       rawText: trimmed,
       recognized: true,

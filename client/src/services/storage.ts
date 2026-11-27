@@ -14,6 +14,7 @@ export const DEFAULT_ACCESSIBILITY_SETTINGS: AccessibilitySettings = {
   confidenceThreshold: 0.6,
   autoScroll: true,
   commandListeningEnabled: true,
+  focusMode: false,
 };
 
 function openDatabase(): Promise<IDBDatabase> {
