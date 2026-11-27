@@ -6,6 +6,10 @@ describe('routeGlobalVoiceCommand', () => {
     expect(routeGlobalVoiceCommand('VAAK, go home.')).toEqual({ type: 'go_home' });
     expect(routeGlobalVoiceCommand('Open my classes.')).toEqual({ type: 'open_classes' });
     expect(routeGlobalVoiceCommand('Open the latest class.')).toEqual({ type: 'open_latest_class' });
+    expect(routeGlobalVoiceCommand('Open Photosynthesis.')).toEqual({
+      type: 'open_class_by_name',
+      nameQuery: 'Photosynthesis',
+    });
     expect(routeGlobalVoiceCommand('Open my study notes.')).toEqual({ type: 'open_notes' });
     expect(routeGlobalVoiceCommand('Open participation mode.')).toEqual({ type: 'open_participation' });
     expect(routeGlobalVoiceCommand('Where am I?')).toEqual({ type: 'where_am_i' });

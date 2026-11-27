@@ -5,6 +5,7 @@ export type GlobalVoiceAction =
   | { type: 'go_home' }
   | { type: 'open_classes' }
   | { type: 'open_latest_class' }
+  | { type: 'open_class_by_name'; nameQuery: string }
   | { type: 'open_notes' }
   | { type: 'open_participation' }
   | { type: 'go_back' }
@@ -118,6 +119,10 @@ export function routeGlobalVoiceCommand(
   }
   if (/^(?:open|show|go\s+to)\s+(?:student\s+)?participation(?:\s+mode)?$/i.test(lower)) {
     return { type: 'open_participation' };
+  }
+  const openByName = cleaned.match(/^(?:open|select)\s+(?:the\s+)?(.+?)(?:\s+class)?$/i);
+  if (openByName && openByName[1]?.trim()) {
+    return { type: 'open_class_by_name', nameQuery: openByName[1].trim() };
   }
 
   // Notes reading & cursor

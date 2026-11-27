@@ -970,6 +970,26 @@ export function App() {
         );
         return;
       }
+      if (action.type === 'open_class_by_name') {
+        const q = action.nameQuery.toLowerCase();
+        const match = savedSessions.find((s) => s.title.toLowerCase().includes(q));
+        if (!match) {
+          speakCompanionReply(
+            rawInput,
+            `I couldn't find a saved class matching "${action.nameQuery}".`
+          );
+          return;
+        }
+        setActiveSession(match);
+        setRecordingState('completed');
+        setNoteCursorIndex(0);
+        navigateTo(match.notes ? 'notes' : 'classroom', true);
+        speakCompanionReply(
+          rawInput,
+          `${match.title} is open. You can ask about the lecture, listen to your notes, or review your bookmarks.`
+        );
+        return;
+      }
       if (action.type === 'open_notes') {
         const target = activeSession ?? savedSessions.find((s) => Boolean(s.notes));
         if (!target) {
