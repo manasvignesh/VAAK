@@ -48,9 +48,10 @@ export function HomeScreen({
           </h1>
 
           <p className="max-w-2xl text-sm font-medium leading-relaxed text-[var(--mv-text-muted)] sm:text-lg">
-            A voice-first, two-way Indian classroom workspace. Deaf and hard-of-hearing students
-            follow live multilingual captions with uncertainty indicators and evidence-linked notes—while
-            students with speech disabilities participate aloud through accessible text-to-speech.
+            A voice-first Indian classroom workspace. Deaf and hard-of-hearing students follow live
+            multilingual captions with uncertainty indicators, non-speaking students participate aloud
+            through text-to-speech, and blind or low-vision students navigate hands-free with the
+            Voice Companion for grounded lecture Q&amp;A and audible study notes.
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
