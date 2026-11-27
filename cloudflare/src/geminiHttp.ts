@@ -1,8 +1,15 @@
-import type { StudyNotes, TranscriptSegment, TranslationLanguage } from '../../shared/types.js';
+import type {
+  LectureQaResponse,
+  StudyNotes,
+  TranscriptSegment,
+  TranslationLanguage,
+} from '../../shared/types.js';
 import {
+  buildLectureQaPrompt,
   buildNotesPrompt,
   buildTranslationPrompt,
   validateAndGroundNotes,
+  validateAndGroundQaResponse,
   type RawNotesResponse,
 } from '../../shared/notesGrounding.js';
 import type { Env } from './types.js';
@@ -209,4 +216,54 @@ export async function generateNotesOnWorker(
 
   const parsed = JSON.parse(rawText) as RawNotesResponse;
   return validateAndGroundNotes(sessionId, parsed, educational);
+}
+
+export async function askLectureOnWorker(
+  env: Env,
+  sessionTitle: string,
+  question: string,
+  segments: TranscriptSegment[],
+  previousAnswer?: string
+): Promise<LectureQaResponse> {
+  const educational = segments.filter(
+    (s) =>
+      s.isFinal &&
+      !s.isVoiceCommand &&
+      !s.isGapMarker &&
+      (s.correctedText ?? s.originalText).trim().length > 0
+  );
+  if (educational.length === 0) {
+    return {
+      answer: "I couldn't find that explanation in your saved classroom transcript.",
+      teacherGrounded: false,
+      notFoundInTranscript: true,
+      references: [],
+      spokenSourcesSummary: '',
+    };
+  }
+
+  const prompt = buildLectureQaPrompt(sessionTitle, question, educational, previousAnswer);
+  const rawText = await callWithFallback(
+    env,
+    prompt,
+    {
+      type: 'OBJECT',
+      properties: {
+        answer: { type: 'STRING' },
+        notFoundInTranscript: { type: 'BOOLEAN' },
+        supplementaryExplanation: { type: 'STRING' },
+        segmentIds: { type: 'ARRAY', items: { type: 'STRING' } },
+      },
+      required: ['answer', 'notFoundInTranscript', 'segmentIds'],
+    },
+    22000
+  );
+
+  const parsed = JSON.parse(rawText) as {
+    answer: string;
+    notFoundInTranscript: boolean;
+    supplementaryExplanation?: string;
+    segmentIds: string[];
+  };
+  return validateAndGroundQaResponse(parsed, educational);
 }

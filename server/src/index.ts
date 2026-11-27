@@ -7,6 +7,7 @@ import { loadConfig } from './config.js';
 import { createHealthRouter } from './routes/health.js';
 import { createTranslateRouter } from './routes/translate.js';
 import { createNotesRouter } from './routes/notes.js';
+import { createAskRouter } from './routes/ask.js';
 import { attachTranscriptionWebSocket } from './services/deepgramProxy.js';
 import { createGlobalDailyLimiter } from './middleware/rateLimit.js';
 
@@ -28,6 +29,7 @@ export function createApp() {
   app.use('/api', createHealthRouter(config));
   app.use('/api', globalAiLimiter, createTranslateRouter(config));
   app.use('/api', globalAiLimiter, createNotesRouter(config));
+  app.use('/api', globalAiLimiter, createAskRouter(config));
 
   // In production, serve the built Vite client from client/dist
   const clientDistDir = path.resolve(__dirname, '../../../../client/dist');

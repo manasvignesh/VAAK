@@ -9,12 +9,21 @@ import type {
   SupportedLanguage,
   TranscriptSegment,
   TranslationLanguage,
+  VoiceTurnState,
 } from './types';
-import { fetchCapabilities, requestStudyNotes, requestTranslation } from './services/apiClient';
+import {
+  fetchCapabilities,
+  requestLectureAnswer,
+  requestStudyNotes,
+  requestTranslation,
+} from './services/apiClient';
 import { AudioCaptureService } from './services/audioCapture';
 import { SpeechSocketClient } from './services/speechSocket';
 import { isStandaloneWakeWord, parseVoiceCommand } from './services/voiceCommands';
 import { TtsService, type TtsStatus } from './services/ttsService';
+import { SpokenResponseService } from './services/spokenResponseService';
+import { routeGlobalVoiceCommand } from './services/globalVoiceRouter';
+import { buildReadableSections } from './services/notesReader';
 import {
   clearAllSessions,
   DEFAULT_ACCESSIBILITY_SETTINGS,
@@ -30,11 +39,14 @@ import {
   getDemoTranslation,
 } from './services/demoEngine';
 import { buildLocalBasicNotes } from './services/localNotesFallback';
+import { buildDeterministicCatchMeUp, type CatchMeUpResult } from './services/catchMeUp';
 import { TopNav } from './components/TopNav';
 import { LiveRegion } from './components/LiveRegion';
 import { ConsentModal } from './components/ConsentModal';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { AccessibilityDrawer } from './components/AccessibilityDrawer';
+import { VoiceCompanionBar, type CompanionTurn } from './components/VoiceCompanionBar';
+import { OnboardingDialog } from './components/OnboardingDialog';
 import { HomeScreen } from './screens/HomeScreen';
 import { LiveClassroomScreen } from './screens/LiveClassroomScreen';
 import { StudentParticipationScreen } from './screens/StudentParticipationScreen';
@@ -60,6 +72,8 @@ export function App() {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [interimText, setInterimText] = useState('');
   const [micLevel, setMicLevel] = useState(0);
+  const [commandPulseKey, setCommandPulseKey] = useState(0);
+  const [catchMeUp, setCatchMeUp] = useState<CatchMeUpResult | null>(null);
   const [statusMessage, setStatusMessage] = useState('Ready');
   const [commandFeedback, setCommandFeedback] = useState<{
     tone: 'success' | 'warning' | 'info';
@@ -91,6 +105,18 @@ export function App() {
   const [ttsStatus, setTtsStatus] = useState<TtsStatus>('idle');
   const [ttsDetail, setTtsDetail] = useState('');
 
+  // Phase 7: Voice Companion & Reading Cursor state
+  const [voiceModeEnabled, setVoiceModeEnabled] = useState(false);
+  const [turnState, setTurnState] = useState<VoiceTurnState>('idle');
+  const [companionResponse, setCompanionResponse] = useState('');
+  const [companionError, setCompanionError] = useState<string | null>(null);
+  const [companionSource, setCompanionSource] = useState<string | undefined>(undefined);
+  const [companionHistory, setCompanionHistory] = useState<CompanionTurn[]>([]);
+  const [previousQaAnswer, setPreviousQaAnswer] = useState<string | undefined>(undefined);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [noteCursorIndex, setNoteCursorIndex] = useState(0);
+  const [screenHistory, setScreenHistory] = useState<ScreenId[]>([]);
+
   // Demo mode state
   const [demoStepIdx, setDemoStepIdx] = useState(0);
   const [isDemoPaused, setIsDemoPaused] = useState(false);
@@ -98,11 +124,25 @@ export function App() {
   const audioCaptureRef = useRef(new AudioCaptureService());
   const speechSocketRef = useRef(new SpeechSocketClient());
   const ttsServiceRef = useRef(new TtsService());
+  const spokenServiceRef = useRef(new SpokenResponseService());
+  const qaAbortRef = useRef<AbortController | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const inactivityTimerRef = useRef<number | null>(null);
   const sessionStartTimeRef = useRef<number>(Date.now());
   const segmentCounterRef = useRef<number>(0);
   const activeSessionRef = useRef<ClassroomSession | null>(null);
   const interimTextRef = useRef<string>('');
   const pendingWakeUntilRef = useRef<number>(0);
+  const voiceModeEnabledRef = useRef(voiceModeEnabled);
+  const turnStateRef = useRef<VoiceTurnState>(turnState);
+
+  useEffect(() => {
+    voiceModeEnabledRef.current = voiceModeEnabled;
+  }, [voiceModeEnabled]);
+
+  useEffect(() => {
+    turnStateRef.current = turnState;
+  }, [turnState]);
 
   useEffect(() => {
     activeSessionRef.current = activeSession;
@@ -144,7 +184,12 @@ export function App() {
         });
       });
 
-    loadSettings().then(setSettings);
+    loadSettings().then((loaded) => {
+      setSettings(loaded);
+      if (!loaded.onboardingCompleted) {
+        setOnboardingOpen(true);
+      }
+    });
     getAllSessions().then(setSavedSessions);
   }, []);
 
@@ -240,6 +285,12 @@ export function App() {
     const pendingInterim = interimTextRef.current.trim();
     speechSocketRef.current.stop();
     setInterimText('');
+    if (voiceModeEnabledRef.current) {
+      voiceModeEnabledRef.current = false;
+      setVoiceModeEnabled(false);
+      turnStateRef.current = 'idle';
+      setTurnState('idle');
+    }
 
     const current = activeSessionRef.current ?? currentBeforeStop;
     let segmentsToFinalize = current.segments;
@@ -337,6 +388,7 @@ export function App() {
       const parsed = parseVoiceCommand(candidateText, settings.commandListeningEnabled);
 
       if (parsed.recognized && parsed.action) {
+        setCommandPulseKey((k) => k + 1);
         const cmdSeg: TranscriptSegment = {
           id: nextSegmentId(),
           sessionId: current.id,
@@ -409,13 +461,12 @@ export function App() {
             setCommandFeedback({ tone: 'warning', message: 'No previous explanation to translate.' });
           }
         } else if (action.type === 'summarize_so_far') {
-          const hlCount = educational.filter((s) => s.highlightType).length;
-          const bmCount = educational.filter((s) => s.isBookmarked).length;
           const updated = { ...current, segments: [...current.segments, cmdSeg] };
           setActiveSession(updated);
+          setCatchMeUp(buildDeterministicCatchMeUp(updated.segments, updated.isDemo));
           setCommandFeedback({
             tone: 'info',
-            message: `Summary so far: ${educational.length} finalized explanations, ${hlCount} highlights, and ${bmCount} bookmarks.`,
+            message: 'Catch Me Up summary generated from recent classroom explanations.',
           });
         } else if (action.type === 'end_class_and_notes') {
           const updated = { ...current, segments: [...current.segments, cmdSeg] };
@@ -490,6 +541,14 @@ export function App() {
     setStatusMessage('Requesting microphone permission...');
 
     try {
+      if (voiceModeEnabledRef.current) {
+        speechSocketRef.current.stop();
+        audioCaptureRef.current.stop();
+        voiceModeEnabledRef.current = false;
+        setVoiceModeEnabled(false);
+        turnStateRef.current = 'idle';
+        setTurnState('idle');
+      }
       await audioCaptureRef.current.start({
         onPcmChunk: (buf) => speechSocketRef.current.sendAudio(buf),
         onLevel: setMicLevel,
@@ -734,7 +793,7 @@ export function App() {
     });
   };
 
-  const handleJumpToSegment = (segmentId: string) => {
+  const handleJumpToSegment = useCallback((segmentId: string) => {
     setScreen('classroom');
     setTimeout(() => {
       const el = document.getElementById(`segment-${segmentId}`);
@@ -742,6 +801,649 @@ export function App() {
         el.scrollIntoView({ behavior: settings.reducedMotion ? 'auto' : 'smooth', block: 'center' });
       }
     }, 100);
+  }, [settings.reducedMotion]);
+
+  const navigateTo = useCallback((nextScreen: ScreenId, focusMain = false) => {
+    setScreen((prev) => {
+      if (prev !== nextScreen) {
+        setScreenHistory((h) => [...h.slice(-8), prev]);
+      }
+      return nextScreen;
+    });
+    if (focusMain) {
+      setTimeout(() => mainRef.current?.focus(), 60);
+    }
+  }, []);
+
+  const speakCompanionReply = useCallback(
+    (
+      userText: string,
+      replyText: string,
+      options: { lang?: 'en-IN' | 'hi-IN' | 'te-IN'; sourceSummary?: string; forceSpeak?: boolean } = {}
+    ) => {
+      setCompanionResponse(replyText);
+      setCompanionSource(options.sourceSummary);
+      setCompanionHistory((prev) => [
+        ...prev.slice(-19),
+        {
+          id: `turn-${Date.now()}`,
+          userText,
+          assistantText: replyText,
+          sourceSummary: options.sourceSummary,
+        },
+      ]);
+
+      const shouldSpeak =
+        options.forceSpeak || (voiceModeEnabledRef.current && (settings.autoSpeakResponses ?? true));
+      if (!shouldSpeak) {
+        setPoliteAnnouncement(replyText);
+        if (turnStateRef.current !== 'error') {
+          const nextState = voiceModeEnabledRef.current ? 'listening' : 'idle';
+          turnStateRef.current = nextState;
+          setTurnState(nextState);
+        }
+        return;
+      }
+
+      const lang = options.lang ?? settings.preferredSpeechLang ?? 'en-IN';
+      let spokenText = replyText;
+      if (lang !== 'en-IN' && !spokenServiceRef.current.isVoiceAvailableForLanguage(lang)) {
+        spokenText = `Note: a ${lang} voice is unavailable on this device. ${replyText}`;
+      }
+
+      audioCaptureRef.current.setMuted(true);
+      spokenServiceRef.current.speak(spokenText, {
+        lang,
+        rate: settings.speechRate ?? 1.0,
+        onStateChange: (st) => {
+          if (st === 'speaking') {
+            if (turnStateRef.current !== 'error') {
+              turnStateRef.current = 'speaking';
+              setTurnState('speaking');
+            }
+          } else if (st === 'paused') {
+            turnStateRef.current = 'interrupted';
+            setTurnState('interrupted');
+          } else {
+            audioCaptureRef.current.setMuted(false);
+            if (turnStateRef.current !== 'error' && turnStateRef.current !== 'interrupted') {
+              const nextState = voiceModeEnabledRef.current ? 'listening' : 'idle';
+              turnStateRef.current = nextState;
+              setTurnState(nextState);
+            }
+          }
+        },
+      });
+    },
+    [settings.autoSpeakResponses, settings.preferredSpeechLang, settings.speechRate]
+  );
+
+  const stopCompanionMic = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      window.clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+    if (recordingState === 'idle' || recordingState === 'completed' || recordingState === 'error') {
+      stopLiveAudioAndSocket();
+    }
+    setCompanionError(null);
+    voiceModeEnabledRef.current = false;
+    setVoiceModeEnabled(false);
+    turnStateRef.current = 'idle';
+    setTurnState('idle');
+  }, [recordingState, stopLiveAudioAndSocket]);
+
+  const handleGlobalCommand = useCallback(
+    async (rawInput: string) => {
+      if (voiceModeEnabled) {
+        if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = window.setTimeout(() => {
+          stopCompanionMic();
+          setPoliteAnnouncement('Voice Mode paused after 5 minutes of inactivity.');
+        }, 5 * 60_000);
+      }
+
+      const action = routeGlobalVoiceCommand(rawInput, {
+        hasPreviousAnswer: Boolean(previousQaAnswer),
+      });
+
+      if (!action) {
+        speakCompanionReply(
+          rawInput,
+          `I didn't recognize "${rawInput}". Say "What can I do?" to hear available actions on this screen.`
+        );
+        return;
+      }
+
+      if (action.type === 'stop_speaking' || action.type === 'cancel') {
+        qaAbortRef.current?.abort();
+        spokenServiceRef.current.stop();
+        audioCaptureRef.current.setMuted(false);
+        setTurnState('interrupted');
+        setCompanionResponse(action.type === 'cancel' ? 'Cancelled.' : 'Stopped speaking.');
+        return;
+      }
+      if (action.type === 'stop_listening') {
+        spokenServiceRef.current.stop();
+        stopCompanionMic();
+        setCompanionResponse('Voice listening stopped.');
+        setPoliteAnnouncement('Voice listening stopped.');
+        return;
+      }
+      if (action.type === 'pause_speaking') {
+        spokenServiceRef.current.pause();
+        setTurnState('interrupted');
+        return;
+      }
+      if (action.type === 'continue_speaking') {
+        spokenServiceRef.current.resume();
+        return;
+      }
+      if (action.type === 'repeat_that') {
+        if (!spokenServiceRef.current.repeatLast()) {
+          speakCompanionReply(rawInput, 'There is nothing to repeat yet.');
+        }
+        return;
+      }
+      if (action.type === 'speak_slowly') {
+        const next = spokenServiceRef.current.setRate(spokenServiceRef.current.getRate() - 0.15);
+        updateSettings({ ...settings, speechRate: next });
+        speakCompanionReply(rawInput, `Speaking speed set to ${next}x.`);
+        return;
+      }
+      if (action.type === 'speak_faster') {
+        const next = spokenServiceRef.current.setRate(spokenServiceRef.current.getRate() + 0.15);
+        updateSettings({ ...settings, speechRate: next });
+        speakCompanionReply(rawInput, `Speaking speed set to ${next}x.`);
+        return;
+      }
+
+      if (action.type === 'go_home') {
+        navigateTo('home', true);
+        speakCompanionReply(rawInput, 'Home screen open. You can start a live class, try the demo, or open your saved classes.');
+        return;
+      }
+      if (action.type === 'go_back') {
+        const prev = screenHistory[screenHistory.length - 1] ?? 'home';
+        setScreenHistory((h) => h.slice(0, -1));
+        navigateTo(prev, true);
+        speakCompanionReply(rawInput, `Returned to ${prev}.`);
+        return;
+      }
+      if (action.type === 'where_am_i') {
+        const activeName = activeSession ? ` Active class: ${activeSession.title}.` : '';
+        speakCompanionReply(rawInput, `You are on the ${screen} screen.${activeName}`);
+        return;
+      }
+      if (action.type === 'what_can_i_do') {
+        speakCompanionReply(
+          rawInput,
+          'You can say: Open my classes, Open the latest class, Ask a question about the lecture, Read my latest notes, Read the next section, Catch me up, Stop speaking, or Go home.'
+        );
+        return;
+      }
+      if (action.type === 'open_classes') {
+        navigateTo('classes', true);
+        if (savedSessions.length === 0) {
+          speakCompanionReply(rawInput, 'My Classes is open. You have no saved classes yet.');
+        } else {
+          speakCompanionReply(
+            rawInput,
+            `You have ${savedSessions.length} saved class${savedSessions.length === 1 ? '' : 'es'}. Your most recent class is ${savedSessions[0].title}. Say "Open the latest class" to select it.`
+          );
+        }
+        return;
+      }
+      if (action.type === 'open_latest_class') {
+        const target = activeSession ?? savedSessions[0];
+        if (!target) {
+          speakCompanionReply(rawInput, 'There are no saved classes yet. Say "Start a new class" or try the demo.');
+          return;
+        }
+        setActiveSession(target);
+        setRecordingState('completed');
+        setNoteCursorIndex(0);
+        navigateTo(target.notes ? 'notes' : 'classroom', true);
+        speakCompanionReply(
+          rawInput,
+          `${target.title} is open. You can ask about the lecture, listen to your notes, or review your bookmarks.`
+        );
+        return;
+      }
+      if (action.type === 'open_class_by_name') {
+        const q = action.nameQuery.toLowerCase();
+        const match = savedSessions.find((s) => s.title.toLowerCase().includes(q));
+        if (!match) {
+          speakCompanionReply(
+            rawInput,
+            `I couldn't find a saved class matching "${action.nameQuery}".`
+          );
+          return;
+        }
+        setActiveSession(match);
+        setRecordingState('completed');
+        setNoteCursorIndex(0);
+        navigateTo(match.notes ? 'notes' : 'classroom', true);
+        speakCompanionReply(
+          rawInput,
+          `${match.title} is open. You can ask about the lecture, listen to your notes, or review your bookmarks.`
+        );
+        return;
+      }
+      if (action.type === 'open_notes') {
+        const target = activeSession ?? savedSessions.find((s) => Boolean(s.notes));
+        if (!target) {
+          speakCompanionReply(rawInput, 'No study notes are available yet.');
+          return;
+        }
+        setActiveSession(target);
+        navigateTo('notes', true);
+        speakCompanionReply(rawInput, `Study notes for ${target.title} are open. Say "Read my latest notes" to listen.`);
+        return;
+      }
+      if (action.type === 'open_participation') {
+        navigateTo('participation', true);
+        speakCompanionReply(rawInput, 'Student Participation Console is open.');
+        return;
+      }
+
+      if (
+        action.type === 'read_latest_notes' ||
+        action.type === 'read_next_section' ||
+        action.type === 'read_previous_section' ||
+        action.type === 'read_section'
+      ) {
+        const target = activeSession ?? savedSessions.find((s) => Boolean(s.notes));
+        if (!target?.notes) {
+          speakCompanionReply(rawInput, 'No study notes found. End a class or run the demo to generate notes first.');
+          return;
+        }
+        setActiveSession(target);
+        const sections = buildReadableSections(target.notes);
+        if (sections.length === 0) {
+          speakCompanionReply(rawInput, 'This study notes document has no readable sections yet.');
+          return;
+        }
+
+        let nextIdx = noteCursorIndex;
+        if (action.type === 'read_latest_notes') {
+          nextIdx = 0;
+        } else if (action.type === 'read_next_section') {
+          nextIdx = Math.min(sections.length - 1, noteCursorIndex + 1);
+        } else if (action.type === 'read_previous_section') {
+          nextIdx = Math.max(0, noteCursorIndex - 1);
+        } else if (action.type === 'read_section') {
+          const foundIdx = sections.findIndex((s) => s.key === action.section);
+          if (foundIdx === -1) {
+            speakCompanionReply(rawInput, `There is no ${action.section} section in these notes.`);
+            return;
+          }
+          nextIdx = foundIdx;
+        }
+        setNoteCursorIndex(nextIdx);
+        navigateTo('notes', true);
+        speakCompanionReply(rawInput, sections[nextIdx].spokenText, { forceSpeak: voiceModeEnabled });
+        return;
+      }
+
+      if (action.type === 'open_source_explanation') {
+        const target = activeSession ?? savedSessions.find((s) => Boolean(s.notes));
+        const sections = target?.notes ? buildReadableSections(target.notes) : [];
+        const segId = sections[noteCursorIndex]?.firstSegmentId;
+        if (!segId || !target) {
+          speakCompanionReply(rawInput, 'No source reference is linked to the current section.');
+          return;
+        }
+        setActiveSession(target);
+        handleJumpToSegment(segId);
+        speakCompanionReply(rawInput, 'Opened the original classroom transcript explanation.');
+        return;
+      }
+
+      if (action.type === 'catch_me_up') {
+        const target = activeSession ?? savedSessions[0];
+        if (!target) {
+          speakCompanionReply(rawInput, 'No active or saved class to catch up on.');
+          return;
+        }
+        setActiveSession(target);
+        const res = buildDeterministicCatchMeUp(target.segments, target.isDemo, action.windowMinutes);
+        setCatchMeUp(res);
+        const spoken =
+          res.points.length === 0
+            ? res.headline
+            : `${res.headline} ${res.points.map((p) => p.text).join(' ')}`;
+        speakCompanionReply(rawInput, spoken);
+        return;
+      }
+
+      if (action.type === 'mark_important' || action.type === 'bookmark_topic' || action.type === 'save_for_revision') {
+        const target = activeSession ?? savedSessions[0];
+        if (!target) {
+          speakCompanionReply(rawInput, 'Open a class first before bookmarking.');
+          return;
+        }
+        const educational = target.segments.filter(
+          (s) => s.isFinal && !s.isVoiceCommand && !s.isGapMarker
+        );
+        const lastEdu = educational[educational.length - 1];
+        if (!lastEdu) {
+          speakCompanionReply(rawInput, 'There is no finalized explanation to mark yet.');
+          return;
+        }
+        const isHl = action.type === 'mark_important';
+        const updated: ClassroomSession = {
+          ...target,
+          segments: target.segments.map((s) =>
+            s.id === lastEdu.id
+              ? isHl
+                ? { ...s, highlightType: 'important' }
+                : { ...s, isBookmarked: true, bookmarkLabel: action.type === 'bookmark_topic' ? action.label || 'Bookmarked Topic' : 'Revision' }
+              : s
+          ),
+        };
+        setActiveSession(updated);
+        void persistSession(updated);
+        speakCompanionReply(
+          rawInput,
+          isHl ? 'Marked the latest explanation as important.' : 'Bookmarked the latest explanation for revision.'
+        );
+        return;
+      }
+
+      if (action.type === 'start_class') {
+        setConsentOpen(true);
+        speakCompanionReply(rawInput, 'Opening classroom consent and microphone setup.');
+        return;
+      }
+
+      if (action.type === 'end_class_and_notes') {
+        setConfirmState({
+          open: true,
+          title: 'End Class & Prepare Study Notes?',
+          message: 'Confirm to stop recording and generate evidence-linked study notes.',
+          confirmLabel: 'End Class & Generate Notes',
+          destructive: false,
+          onConfirm: () => {
+            setConfirmState((prev) => ({ ...prev, open: false }));
+            void finalizeAndGenerateNotes();
+          },
+        });
+        speakCompanionReply(rawInput, 'Please confirm ending the class and generating study notes.');
+        return;
+      }
+
+      if (action.type === 'translate_last') {
+        const target = activeSession ?? savedSessions[0];
+        const educational = target?.segments.filter((s) => s.isFinal && !s.isVoiceCommand && !s.isGapMarker) ?? [];
+        const lastEdu = educational[educational.length - 1];
+        if (!lastEdu) {
+          speakCompanionReply(rawInput, 'No finalized explanation to translate.');
+          return;
+        }
+        await handleTranslateSegment(lastEdu.id, action.targetLanguage);
+        speakCompanionReply(rawInput, `Translated the latest explanation into ${action.targetLanguage.toUpperCase()}.`);
+        return;
+      }
+
+      if (action.type === 'translate_previous_answer' && previousQaAnswer) {
+        setTurnState('processing');
+        try {
+          let translated = '';
+          if (activeSession?.isDemo || !capabilities?.aiNotesAndTranslationConfigured) {
+            translated = getDemoTranslation(previousQaAnswer, action.targetLanguage);
+          } else {
+            const res = await requestTranslation(previousQaAnswer, action.targetLanguage);
+            translated = res.translatedText;
+          }
+          const ttsLang =
+            action.targetLanguage === 'te' ? 'te-IN' : action.targetLanguage === 'hi' ? 'hi-IN' : 'en-IN';
+          speakCompanionReply(rawInput, translated, { lang: ttsLang });
+        } catch (err) {
+          speakCompanionReply(
+            rawInput,
+            err instanceof Error ? err.message : 'Unable to translate previous answer.'
+          );
+        }
+        return;
+      }
+
+      if (action.type === 'ask_lecture') {
+        const target = activeSession ?? savedSessions[0];
+        if (!target || target.segments.length === 0) {
+          speakCompanionReply(rawInput, "I couldn't find any saved classroom transcript to search.");
+          return;
+        }
+
+        qaAbortRef.current?.abort();
+        const controller = new AbortController();
+        qaAbortRef.current = controller;
+        setTurnState('processing');
+
+        try {
+          if (target.isDemo || !capabilities?.aiNotesAndTranslationConfigured) {
+            const qWords = action.question
+              .toLowerCase()
+              .replace(/[^a-z0-9\s]/g, '')
+              .split(/\s+/)
+              .filter((w) => w.length > 3);
+            const educational = target.segments.filter(
+              (s) => s.isFinal && !s.isVoiceCommand && !s.isGapMarker && !s.isUnclearAudio
+            );
+            const matched = educational.find((s) =>
+              qWords.some((qw) => (s.correctedText ?? s.originalText).toLowerCase().includes(qw))
+            );
+            if (!matched) {
+              speakCompanionReply(rawInput, "I couldn't find that explanation in your saved classroom transcript.");
+              return;
+            }
+            const text = (matched.correctedText ?? matched.originalText).trim();
+            setPreviousQaAnswer(text);
+            const mins = Math.round(matched.timestampMs / 60000);
+            const sourceDesc =
+              matched.timestampMs < 60000
+                ? `${Math.floor(matched.timestampMs / 1000)} seconds into the lecture`
+                : `approximately ${mins} minute${mins === 1 ? '' : 's'} into the lecture`;
+            speakCompanionReply(rawInput, text, {
+              sourceSummary: `Teacher explained this ${sourceDesc}`,
+            });
+            return;
+          }
+
+          const qa = await requestLectureAnswer(
+            target.title,
+            action.question,
+            target.segments,
+            previousQaAnswer,
+            controller.signal
+          );
+          if (controller.signal.aborted) return;
+          if (!qa.notFoundInTranscript) {
+            setPreviousQaAnswer(qa.answer);
+          }
+          const fullReply = qa.supplementaryExplanation
+            ? `${qa.answer} (Clarifying note: ${qa.supplementaryExplanation})`
+            : qa.answer;
+          speakCompanionReply(rawInput, fullReply, {
+            sourceSummary: qa.spokenSourcesSummary || undefined,
+          });
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') return;
+          speakCompanionReply(
+            rawInput,
+            err instanceof Error ? err.message : 'Unable to answer that question right now.'
+          );
+        }
+      }
+    },
+    [
+      activeSession,
+      capabilities?.aiNotesAndTranslationConfigured,
+      finalizeAndGenerateNotes,
+      handleJumpToSegment,
+      handleTranslateSegment,
+      noteCursorIndex,
+      persistSession,
+      previousQaAnswer,
+      savedSessions,
+      screen,
+      screenHistory,
+      settings,
+      speakCompanionReply,
+      stopCompanionMic,
+      updateSettings,
+      voiceModeEnabled,
+    ]
+  );
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && turnState === 'speaking') {
+        spokenServiceRef.current.stop();
+        audioCaptureRef.current.setMuted(false);
+        setTurnState('interrupted');
+        setCompanionResponse('Playback interrupted.');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [turnState]);
+
+  const startCompanionVoice = async () => {
+    setCompanionError(null);
+    if (!capabilities?.speechToTextConfigured) {
+      voiceModeEnabledRef.current = true;
+      setVoiceModeEnabled(true);
+      turnStateRef.current = 'idle';
+      setTurnState('idle');
+      speakCompanionReply(
+        'Activate Voice Mode',
+        'Voice Mode visual & spoken controls are active. Live microphone streaming requires DEEPGRAM_API_KEY, or you can type any command in the Companion bar.',
+        { forceSpeak: true }
+      );
+      return;
+    }
+    if (recordingState === 'listening' || recordingState === 'connecting' || recordingState === 'reconnecting') {
+      voiceModeEnabledRef.current = true;
+      setVoiceModeEnabled(true);
+      turnStateRef.current = 'listening';
+      setTurnState('listening');
+      speakCompanionReply('Activate Voice Mode', 'Voice Mode active alongside live classroom.', {
+        forceSpeak: true,
+      });
+      return;
+    }
+
+    stopLiveAudioAndSocket();
+    let announcedReady = false;
+
+    try {
+      voiceModeEnabledRef.current = true;
+      setVoiceModeEnabled(true);
+      turnStateRef.current = 'processing';
+      setTurnState('processing');
+      setCompanionResponse('Connecting microphone and Deepgram speech recognition...');
+
+      await audioCaptureRef.current.start({
+        onPcmChunk: (buf) => speechSocketRef.current.sendAudio(buf),
+        onLevel: setMicLevel,
+        onError: (msg) => {
+          turnStateRef.current = 'error';
+          setTurnState('error');
+          setCompanionError(msg);
+          setCompanionResponse(msg);
+          setAssertiveAnnouncement(msg);
+        },
+      });
+
+      speechSocketRef.current.connect('multi', audioCaptureRef.current.getSampleRate(), {
+        onMessage: (msg) => {
+          if (msg.type === 'ready' || (msg.type === 'status' && msg.status === 'connected')) {
+            setCompanionError(null);
+            if (!announcedReady) {
+              announcedReady = true;
+              turnStateRef.current = 'listening';
+              setTurnState('listening');
+              speakCompanionReply(
+                'Activate Voice Mode',
+                'Voice Mode is listening. Say "What can I do?" to hear available actions.',
+                { forceSpeak: true }
+              );
+            } else if (turnStateRef.current !== 'speaking') {
+              turnStateRef.current = 'listening';
+              setTurnState('listening');
+            }
+          } else if (msg.type === 'status' && msg.status === 'reconnecting') {
+            turnStateRef.current = 'processing';
+            setTurnState('processing');
+            setCompanionResponse(msg.message || 'Reconnecting speech recognition...');
+          } else if (msg.type === 'transcript') {
+            if (!msg.isFinal) {
+              turnStateRef.current = 'recognizing';
+              setTurnState('recognizing');
+            } else {
+              void handleGlobalCommand(msg.text);
+            }
+          } else if (msg.type === 'error') {
+            turnStateRef.current = 'error';
+            setTurnState('error');
+            setCompanionError(msg.message);
+            setCompanionResponse(msg.message);
+            setAssertiveAnnouncement(msg.message);
+            if (!msg.recoverable) {
+              audioCaptureRef.current.stop();
+              speechSocketRef.current.stop();
+              voiceModeEnabledRef.current = false;
+              setVoiceModeEnabled(false);
+            }
+          }
+        },
+        onUnexpectedClose: ({ code, reason }) => {
+          const detail = reason ? `${reason} (code ${code})` : `WebSocket closed (code ${code})`;
+          const msg = `Live speech recognition connection interrupted: ${detail}. Retrying...`;
+          turnStateRef.current = 'error';
+          setTurnState('error');
+          setCompanionError(msg);
+          setCompanionResponse(msg);
+        },
+        onReconnectFailed: ({ code, reason }) => {
+          audioCaptureRef.current.stop();
+          speechSocketRef.current.stop();
+          const detail = reason ? `${reason} (code ${code})` : `code ${code}`;
+          const msg = `Could not reach the live speech recognition backend (/ws/transcribe, ${detail}). Verify the VAAK server is running, then select Retry Voice Mode or type commands below.`;
+          turnStateRef.current = 'error';
+          setTurnState('error');
+          setCompanionError(msg);
+          setCompanionResponse(msg);
+          setAssertiveAnnouncement(msg);
+        },
+        onReconnected: () => {
+          setCompanionError(null);
+          turnStateRef.current = 'listening';
+          setTurnState('listening');
+          setCompanionResponse('Reconnected to live speech recognition.');
+        },
+      });
+    } catch (err) {
+      audioCaptureRef.current.stop();
+      speechSocketRef.current.stop();
+      voiceModeEnabledRef.current = false;
+      setVoiceModeEnabled(false);
+      turnStateRef.current = 'error';
+      setTurnState('error');
+      const msg = err instanceof Error ? err.message : 'Microphone access failed.';
+      setCompanionError(msg);
+      setCompanionResponse(msg);
+      setAssertiveAnnouncement(msg);
+    }
+  };
+
+  const handleToggleVoiceMode = async () => {
+    if (voiceModeEnabled) {
+      stopCompanionMic();
+      return;
+    }
+    await startCompanionVoice();
   };
 
   return (
@@ -750,19 +1452,64 @@ export function App() {
 
       <TopNav
         currentScreen={screen}
-        onNavigate={setScreen}
+        onNavigate={(s) => navigateTo(s)}
         onOpenAccessibility={() => setA11yOpen(true)}
         isLiveOrDemoActive={recordingState === 'listening' || recordingState === 'reconnecting'}
         isDemoMode={Boolean(activeSession?.isDemo)}
       />
 
-      <main id="main-content" tabIndex={-1}>
+      <VoiceCompanionBar
+        voiceModeEnabled={voiceModeEnabled}
+        turnState={turnState}
+        autoSpeakEnabled={settings.autoSpeakResponses ?? true}
+        currentResponse={companionResponse}
+        currentSourceSummary={companionSource}
+        errorMessage={companionError}
+        history={companionHistory}
+        onToggleVoiceMode={() => void handleToggleVoiceMode()}
+        onRetryVoiceMode={() => void startCompanionVoice()}
+        onSubmitCommandText={(txt) => void handleGlobalCommand(txt)}
+        onStopSpeaking={() => {
+          qaAbortRef.current?.abort();
+          spokenServiceRef.current.stop();
+          audioCaptureRef.current.setMuted(false);
+          setTurnState('interrupted');
+          setCompanionResponse('Stopped speaking.');
+        }}
+        onPauseSpeaking={() => {
+          spokenServiceRef.current.pause();
+          setTurnState('interrupted');
+        }}
+        onResumeSpeaking={() => spokenServiceRef.current.resume()}
+        onRepeatLast={() => {
+          if (!spokenServiceRef.current.repeatLast()) {
+            setCompanionResponse('Nothing to repeat yet.');
+          }
+        }}
+        onToggleAutoSpeak={() =>
+          updateSettings({
+            ...settings,
+            autoSpeakResponses: !(settings.autoSpeakResponses ?? true),
+          })
+        }
+        onShowHelp={() => void handleGlobalCommand('What can I do?')}
+      />
+
+      <main id="main-content" ref={mainRef} tabIndex={-1}>
         {screen === 'home' && (
           <HomeScreen
             capabilities={capabilities}
-            savedSessionCount={savedSessions.length}
+            savedSessions={savedSessions}
+            reducedMotion={settings.reducedMotion}
+            recordingState={recordingState}
             onStartLiveClass={() => setConsentOpen(true)}
             onStartDemo={startDemoSession}
+            onOpenSession={(sess) => {
+              setActiveSession(sess);
+              setRecordingState('completed');
+              setCatchMeUp(null);
+              setScreen(sess.notes ? 'notes' : 'classroom');
+            }}
             onNavigate={setScreen}
             onOpenAccessibility={() => setA11yOpen(true)}
           />
@@ -774,8 +1521,18 @@ export function App() {
             interimText={interimText}
             recordingState={recordingState}
             micLevel={micLevel}
+            commandPulseKey={commandPulseKey}
             statusMessage={statusMessage}
             commandFeedback={commandFeedback}
+            catchMeUp={catchMeUp}
+            onTriggerCatchMeUp={() => {
+              if (!activeSession) return;
+              setCatchMeUp(
+                buildDeterministicCatchMeUp(activeSession.segments, activeSession.isDemo)
+              );
+              setPoliteAnnouncement('Catch Me Up summary updated.');
+            }}
+            onDismissCatchMeUp={() => setCatchMeUp(null)}
             settings={settings}
             onUpdateSettings={updateSettings}
             onStopRecording={() => {
@@ -952,6 +1709,22 @@ export function App() {
         destructive={confirmState.destructive}
         onConfirm={confirmState.onConfirm}
         onCancel={() => setConfirmState((prev) => ({ ...prev, open: false }))}
+      />
+
+      <OnboardingDialog
+        open={onboardingOpen}
+        settings={settings}
+        onSavePreferences={(next, activateVoiceNow) => {
+          updateSettings(next);
+          setOnboardingOpen(false);
+          if (activateVoiceNow) {
+            void handleToggleVoiceMode();
+          }
+        }}
+        onClose={() => {
+          updateSettings({ ...settings, onboardingCompleted: true });
+          setOnboardingOpen(false);
+        }}
       />
     </div>
   );

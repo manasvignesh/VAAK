@@ -14,6 +14,12 @@ export const DEFAULT_ACCESSIBILITY_SETTINGS: AccessibilitySettings = {
   confidenceThreshold: 0.6,
   autoScroll: true,
   commandListeningEnabled: true,
+  focusMode: false,
+  voiceModeEnabled: false,
+  autoSpeakResponses: true,
+  speechRate: 1.0,
+  preferredSpeechLang: 'en-IN',
+  onboardingCompleted: false,
 };
 
 function openDatabase(): Promise<IDBDatabase> {

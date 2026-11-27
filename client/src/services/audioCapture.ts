@@ -30,6 +30,8 @@ export class AudioCaptureService {
   }
 
   public async start(callbacks: AudioCaptureCallbacks): Promise<void> {
+    this.stop();
+
     if (!this.isSupported()) {
       throw new Error(
         'Your browser does not support microphone audio capture. Use Interactive Demo Mode or a modern Chromium/Firefox/Safari browser.'
@@ -49,18 +51,27 @@ export class AudioCaptureService {
       const name = err instanceof DOMException ? err.name : '';
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         throw new Error(
-          'Microphone permission was denied. VAAK needs microphone access to transcribe classroom speech. Allow microphone access in your browser settings or try Demo Mode.'
+          'Microphone permission was denied. Allow microphone access in your browser settings, then select Retry Voice Mode.'
         );
       }
       if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         throw new Error(
-          'No microphone was detected on this device. Connect a microphone or use Demo Mode.'
+          'No microphone was detected on this device. Connect a microphone or use the text command bar.'
         );
       }
-      throw new Error('Unable to access the microphone. Please check device permissions.');
+      if (name === 'NotReadableError' || name === 'TrackStartError') {
+        throw new Error(
+          'Your microphone is busy in another application or tab. Close the other audio app and select Retry Voice Mode.'
+        );
+      }
+      throw new Error('Unable to access the microphone. Please check device permissions and retry.');
     }
 
+    this.targetSampleRate = 16000;
     this.audioContext = new AudioContext({ sampleRate: this.targetSampleRate });
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
     this.targetSampleRate = this.audioContext.sampleRate;
     this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
     this.processorNode = this.audioContext.createScriptProcessor(4096, 1, 1);

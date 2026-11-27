@@ -1,8 +1,14 @@
 import type { ClientWsMessage, ServerWsMessage, SupportedLanguage } from '../types';
 
+export interface SpeechCloseInfo {
+  code: number;
+  reason: string;
+}
+
 export interface SpeechSocketHandlers {
   onMessage: (msg: ServerWsMessage) => void;
-  onUnexpectedClose: () => void;
+  onUnexpectedClose: (info: SpeechCloseInfo) => void;
+  onReconnectFailed?: (info: SpeechCloseInfo) => void;
   onReconnected: () => void;
 }
 
@@ -20,6 +26,7 @@ export class SpeechSocketClient {
     sampleRate: number,
     handlers: SpeechSocketHandlers
   ): void {
+    this.closeCurrentSocket();
     this.intentionalClose = false;
     this.reconnectAttempts = 0;
     this.currentLanguage = language;
@@ -28,25 +35,46 @@ export class SpeechSocketClient {
     this.openSocket(false);
   }
 
+  private closeCurrentSocket(): void {
+    if (this.ws) {
+      const existing = this.ws;
+      this.ws = null;
+      existing.onopen = null;
+      existing.onmessage = null;
+      existing.onclose = null;
+      existing.onerror = null;
+      try {
+        if (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING) {
+          existing.close(1000, 'Replacing connection');
+        }
+      } catch {
+        // ignore close errors
+      }
+    }
+  }
+
   private openSocket(isReconnect: boolean): void {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${window.location.host}/ws/transcribe`;
-    this.ws = new WebSocket(url);
+    const socket = new WebSocket(url);
+    this.ws = socket;
 
-    this.ws.onopen = () => {
+    socket.onopen = () => {
+      if (this.ws !== socket || this.intentionalClose) return;
       const startMsg: ClientWsMessage = {
         type: 'start',
         language: this.currentLanguage,
         sampleRate: this.currentSampleRate,
       };
-      this.ws?.send(JSON.stringify(startMsg));
+      socket.send(JSON.stringify(startMsg));
       if (isReconnect) {
         this.reconnectAttempts = 0;
         this.handlers?.onReconnected();
       }
     };
 
-    this.ws.onmessage = (event) => {
+    socket.onmessage = (event) => {
+      if (this.ws !== socket) return;
       try {
         const msg = JSON.parse(event.data as string) as ServerWsMessage;
         this.handlers?.onMessage(msg);
@@ -55,16 +83,22 @@ export class SpeechSocketClient {
       }
     };
 
-    this.ws.onclose = () => {
-      if (this.intentionalClose) return;
-      this.handlers?.onUnexpectedClose();
+    socket.onclose = (event) => {
+      if (this.ws !== socket || this.intentionalClose) return;
+      const info: SpeechCloseInfo = {
+        code: event.code,
+        reason: event.reason || '',
+      };
+      this.handlers?.onUnexpectedClose(info);
       if (this.reconnectAttempts < this.maxReconnects) {
         this.reconnectAttempts += 1;
         setTimeout(() => {
-          if (!this.intentionalClose) {
+          if (!this.intentionalClose && this.ws === socket) {
             this.openSocket(true);
           }
         }, 1200 * this.reconnectAttempts);
+      } else {
+        this.handlers?.onReconnectFailed?.(info);
       }
     };
   }

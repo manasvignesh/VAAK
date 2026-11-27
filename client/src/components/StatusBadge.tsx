@@ -9,12 +9,12 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ tone, label }: StatusBadgeProps) {
   const toneStyles: Record<BadgeTone, string> = {
-    neutral: 'border-[var(--mv-border)] bg-[var(--mv-surface-alt)] text-[var(--mv-text)]',
-    live: 'border-[var(--mv-accent)] bg-[var(--mv-accent-soft)] text-[var(--mv-accent)]',
-    success: 'border-[var(--mv-success)] bg-[var(--mv-success-bg)] text-[var(--mv-success)]',
-    warning: 'border-[var(--mv-amber)] bg-[var(--mv-amber-bg)] text-[var(--mv-amber)]',
-    danger: 'border-[var(--mv-danger)] bg-[var(--mv-danger-bg)] text-[var(--mv-danger)]',
-    demo: 'border-[var(--mv-amber)] bg-[var(--mv-amber-bg)] text-[var(--mv-amber)]',
+    neutral: 'bg-[var(--mv-surface)] text-[var(--mv-text)]',
+    live: 'bg-[var(--mv-lime)] text-[#151515]',
+    success: 'bg-[var(--mv-lime)] text-[#151515]',
+    warning: 'bg-[var(--mv-amber)] text-[#151515]',
+    danger: 'bg-[var(--mv-danger)] text-[#151515]',
+    demo: 'bg-[var(--mv-lavender)] text-[#151515]',
   };
 
   const Icon =
@@ -30,7 +30,7 @@ export function StatusBadge({ tone, label }: StatusBadgeProps) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold tracking-wide ${toneStyles[tone]}`}
+      className={`nb-pill inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold tracking-wide ${toneStyles[tone]}`}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       <span>{label}</span>

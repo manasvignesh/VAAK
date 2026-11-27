@@ -30,6 +30,32 @@ export interface AccessibilitySettings {
   confidenceThreshold: number; // Default 0.6 (configurable, not a clinical threshold)
   autoScroll: boolean;
   commandListeningEnabled: boolean;
+  focusMode?: boolean;
+  voiceModeEnabled?: boolean;
+  autoSpeakResponses?: boolean;
+  speechRate?: number;
+  preferredSpeechLang?: 'en-IN' | 'hi-IN' | 'te-IN';
+  onboardingCompleted?: boolean;
+}
+
+export type VoiceTurnState =
+  | 'idle'
+  | 'listening'
+  | 'recognizing'
+  | 'processing'
+  | 'speaking'
+  | 'interrupted'
+  | 'error';
+
+export interface LectureQaResponse {
+  answer: string;
+  teacherGrounded: boolean;
+  supplementaryExplanation?: string;
+  notFoundInTranscript: boolean;
+  references: EvidenceReference[];
+  spokenSourcesSummary: string;
+  isCached?: boolean;
+  isDemo?: boolean;
 }
 
 export interface WordToken {

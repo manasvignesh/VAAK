@@ -1,15 +1,18 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { z } from 'zod';
 import type {
+  LectureQaResponse,
   StudyNotes,
   TranscriptSegment,
   TranslationLanguage,
 } from '../../../shared/types.js';
 import {
+  buildLectureQaPrompt,
   buildNotesPrompt,
   buildTranslationPrompt,
   TRANSLATION_LANGUAGE_NAMES,
   validateAndGroundNotes,
+  validateAndGroundQaResponse,
 } from '../../../shared/notesGrounding.js';
 import type { ServerConfig } from '../config.js';
 
@@ -293,4 +296,81 @@ export async function generateEvidenceLinkedNotes(
   }
 
   return validateAndGroundNotes(sessionId, validated.data, educationalSegments);
+}
+
+const RawQaResponseSchema = z.object({
+  answer: z.string().min(1),
+  notFoundInTranscript: z.boolean().default(false),
+  supplementaryExplanation: z.string().optional(),
+  segmentIds: z.array(z.string()).default([]),
+});
+
+export async function answerLectureQuestion(
+  config: ServerConfig,
+  sessionTitle: string,
+  question: string,
+  segments: TranscriptSegment[],
+  previousAnswer?: string
+): Promise<LectureQaResponse> {
+  if (!config.geminiApiKey) {
+    throw new GeminiServiceError(
+      'GEMINI_NOT_CONFIGURED',
+      'Gemini API key is not configured on the server.',
+      503
+    );
+  }
+
+  const educationalSegments = segments.filter(
+    (s) => s.isFinal && !s.isVoiceCommand && !s.isGapMarker && (s.correctedText ?? s.originalText).trim().length > 0
+  );
+  if (educationalSegments.length === 0) {
+    return {
+      answer: "I couldn't find that explanation in your saved classroom transcript.",
+      teacherGrounded: false,
+      notFoundInTranscript: true,
+      references: [],
+      spokenSourcesSummary: '',
+    };
+  }
+
+  const prompt = buildLectureQaPrompt(sessionTitle, question, educationalSegments, previousAnswer);
+  const ai = new GoogleGenAI({ apiKey: config.geminiApiKey });
+  const response = await callWithModelFallback(config, 'Gemini lecture Q&A', 22000, (model) =>
+    ai.models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        responseJsonSchema: {
+          type: Type.OBJECT,
+          properties: {
+            answer: { type: Type.STRING },
+            notFoundInTranscript: { type: Type.BOOLEAN },
+            supplementaryExplanation: { type: Type.STRING },
+            segmentIds: { type: Type.ARRAY, items: { type: Type.STRING } },
+          },
+          required: ['answer', 'notFoundInTranscript', 'segmentIds'],
+        },
+      },
+    })
+  );
+
+  if (!response.text) {
+    throw new GeminiServiceError('EMPTY_AI_RESPONSE', 'Lecture Q&A returned an empty response.', 502);
+  }
+
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(response.text);
+  } catch {
+    throw new GeminiServiceError('INVALID_AI_JSON', 'Lecture Q&A returned malformed JSON.', 502);
+  }
+
+  const validated = RawQaResponseSchema.safeParse(parsedJson);
+  if (!validated.success) {
+    throw new GeminiServiceError('INVALID_AI_SCHEMA', 'Lecture Q&A failed schema validation.', 502);
+  }
+
+  return validateAndGroundQaResponse(validated.data, educationalSegments);
 }

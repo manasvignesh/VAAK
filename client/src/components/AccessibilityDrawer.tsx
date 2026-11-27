@@ -113,9 +113,39 @@ export function AccessibilityDrawer({
           />
         </label>
 
-        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[var(--mv-border)] p-3">
+        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border-[2px] border-[var(--mv-border)] bg-[var(--mv-bg)] p-3">
           <div>
-            <span className="block font-semibold">Reduced Motion</span>
+            <span className="block font-bold">Automatic Spoken Responses</span>
+            <span className="text-xs text-[var(--mv-text-muted)]">
+              Disable if you prefer your own screen reader (e.g., NVDA) to read updates.
+            </span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.autoSpeakResponses ?? true}
+            onChange={(e) => onChange({ ...settings, autoSpeakResponses: e.target.checked })}
+            className="h-5 w-5 accent-[var(--mv-border)]"
+          />
+        </label>
+
+        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border-[2px] border-[var(--mv-border)] bg-[var(--mv-bg)] p-3">
+          <div>
+            <span className="block font-bold">Focus Mode (Distraction-Free Captions)</span>
+            <span className="text-xs text-[var(--mv-text-muted)]">
+              Hides 3D visuals and sidebars during live classes so captions dominate.
+            </span>
+          </div>
+          <input
+            type="checkbox"
+            checked={Boolean(settings.focusMode)}
+            onChange={(e) => onChange({ ...settings, focusMode: e.target.checked })}
+            className="h-5 w-5 accent-[var(--mv-border)]"
+          />
+        </label>
+
+        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border-[2px] border-[var(--mv-border)] bg-[var(--mv-bg)] p-3">
+          <div>
+            <span className="block font-bold">Reduced Motion</span>
             <span className="text-xs text-[var(--mv-text-muted)]">
               Minimizes transitions and animated status indicators.
             </span>
