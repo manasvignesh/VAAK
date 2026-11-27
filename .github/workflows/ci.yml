@@ -1,0 +1,62 @@
+name: MyVoice CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-test-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: Verify no .env is present and build/start Docker Compose (key-free)
+        run: |
+          test ! -f .env
+          docker compose up --build -d
+
+      - name: Verify health endpoint, capabilities, frontend, and static assets
+        run: |
+          for i in $(seq 1 25); do
+            if curl -fsS http://localhost:3000/api/health > /tmp/health.json; then
+              cat /tmp/health.json
+              echo ""
+              curl -fsS http://localhost:3000/api/capabilities | tee /tmp/caps.json
+              grep -q '"demoModeAvailable":true' /tmp/caps.json
+              curl -fsS http://localhost:3000/ -o /tmp/index.html
+              ASSET=$(grep -oE '/assets/index-[^"]+\.js' /tmp/index.html | head -n1)
+              test -n "$ASSET"
+              curl -fsS -o /dev/null -w "ASSET_HTTP=%{http_code}\n" "http://localhost:3000${ASSET}"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+
+      - name: Tear down Docker Compose
+        if: always()
+        run: docker compose down

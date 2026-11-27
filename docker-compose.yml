@@ -1,0 +1,14 @@
+services:
+  myvoice:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-latest}
+      - GEMINI_FALLBACK_MODEL=${GEMINI_FALLBACK_MODEL:-gemini-flash-lite-latest}
+    restart: unless-stopped
