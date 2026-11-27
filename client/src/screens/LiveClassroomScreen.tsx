@@ -48,7 +48,11 @@ interface LiveClassroomScreenProps {
   onToggleHighlight: (segmentId: string) => void;
   onToggleBookmark: (segmentId: string) => void;
   onCorrectSegment: (segmentId: string, correctedText: string) => void;
-  onTranslateSegment: (segmentId: string, targetLanguage: TranslationLanguage) => Promise<void>;
+  onTranslateSegment: (segmentId: string, targetLanguage: TranslationLanguage) => Promise<unknown>;
+  translateTarget: TranslationLanguage;
+  onChangeTranslateTarget: (lang: TranslationLanguage) => void;
+  autoTranslateEnabled: boolean;
+  onToggleAutoTranslate: () => void;
   onOpenParticipation: () => void;
   onStartDemo: () => void;
   onDemoNextStep?: () => void;
@@ -83,6 +87,10 @@ export function LiveClassroomScreen({
   onToggleBookmark,
   onCorrectSegment,
   onTranslateSegment,
+  translateTarget,
+  onChangeTranslateTarget,
+  autoTranslateEnabled,
+  onToggleAutoTranslate,
   onOpenParticipation,
   onStartDemo,
   onDemoNextStep,
@@ -94,7 +102,6 @@ export function LiveClassroomScreen({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const [translatingId, setTranslatingId] = useState<string | null>(null);
-  const [translateTarget, setTranslateTarget] = useState<TranslationLanguage>('te');
   const [activeSideTab, setActiveSideTab] = useState<'saved' | 'commands'>('saved');
   const [elapsedSec, setElapsedSec] = useState(0);
 
@@ -414,18 +421,30 @@ export function LiveClassroomScreen({
                 </span>
               )}
             </div>
-            <div data-tour-id="translate-controls" className="flex items-center gap-2">
+            <div data-tour-id="translate-controls" className="flex flex-wrap items-center gap-2">
               <label htmlFor="translate-lang-select">Translate to:</label>
               <select
                 id="translate-lang-select"
                 value={translateTarget}
-                onChange={(e) => setTranslateTarget(e.target.value as TranslationLanguage)}
+                onChange={(e) => onChangeTranslateTarget(e.target.value as TranslationLanguage)}
                 className="rounded-lg border-2 border-[var(--mv-border)] bg-[var(--mv-surface)] px-2 py-1 text-xs font-bold"
               >
                 <option value="te">Telugu (తెలుగు)</option>
                 <option value="hi">Hindi (हिन्दी)</option>
                 <option value="en">English</option>
               </select>
+              <button
+                type="button"
+                aria-pressed={autoTranslateEnabled}
+                onClick={onToggleAutoTranslate}
+                className={`nb-btn inline-flex min-h-7 items-center px-2.5 py-0.5 text-[11px] font-bold ${
+                  autoTranslateEnabled
+                    ? 'bg-[var(--mv-lime)] text-[#151515]'
+                    : 'bg-[var(--mv-surface)] text-[var(--mv-text)]'
+                }`}
+              >
+                {autoTranslateEnabled ? 'Auto-Translate: ON' : 'Auto-Translate: OFF'}
+              </button>
             </div>
           </div>
 

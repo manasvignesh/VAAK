@@ -115,6 +115,11 @@ export function App() {
   const [companionHistory, setCompanionHistory] = useState<CompanionTurn[]>([]);
   const [previousQaAnswer, setPreviousQaAnswer] = useState<string | undefined>(undefined);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [selectedTranslateLanguage, setSelectedTranslateLanguage] =
+    useState<TranslationLanguage>('te');
+  const [autoTranslateCaptions, setAutoTranslateCaptions] = useState(true);
+  const selectedTranslateLanguageRef = useRef<TranslationLanguage>(selectedTranslateLanguage);
+  const autoTranslateCaptionsRef = useRef<boolean>(autoTranslateCaptions);
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0);
   const [speakTourEnabled, setSpeakTourEnabled] = useState(false);
@@ -225,18 +230,24 @@ export function App() {
   }, []);
 
   const handleTranslateSegment = useCallback(
-    async (segmentId: string, targetLanguage: TranslationLanguage) => {
-      const current = activeSessionRef.current;
-      if (!current) return;
-      const seg = current.segments.find((s) => s.id === segmentId);
-      if (!seg) return;
+    async (
+      segmentId: string,
+      targetLanguage: TranslationLanguage,
+      sessionOverride?: ClassroomSession
+    ): Promise<{ translatedText: string; isDemo: boolean } | null> => {
+      const initial = sessionOverride ?? activeSessionRef.current;
+      if (!initial) return null;
+      const seg = initial.segments.find((s) => s.id === segmentId);
+      if (!seg || seg.isUnclearAudio) return null;
 
       const textToTranslate = (seg.correctedText ?? seg.originalText).trim();
+      if (!textToTranslate) return null;
+
       try {
         let translatedText: string;
         let isDemo = false;
 
-        if (current.isDemo) {
+        if (initial.isDemo) {
           translatedText = getDemoTranslation(textToTranslate, targetLanguage);
           isDemo = true;
         } else {
@@ -245,9 +256,13 @@ export function App() {
           isDemo = res.isDemo;
         }
 
+        const latest =
+          activeSessionRef.current && activeSessionRef.current.id === initial.id
+            ? activeSessionRef.current
+            : initial;
         const updated: ClassroomSession = {
-          ...current,
-          segments: current.segments.map((s) =>
+          ...latest,
+          segments: latest.segments.map((s) =>
             s.id === segmentId
               ? {
                   ...s,
@@ -263,16 +278,36 @@ export function App() {
               : s
           ),
         };
+        activeSessionRef.current = updated;
         setActiveSession(updated);
         void persistSession(updated);
         setPoliteAnnouncement(`Translated caption to ${targetLanguage.toUpperCase()}.`);
+        return { translatedText, isDemo };
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Translation failed.';
         setCommandFeedback({ tone: 'warning', message: msg });
         setAssertiveAnnouncement(msg);
+        return null;
       }
     },
-    [capabilities?.aiNotesAndTranslationConfigured, persistSession]
+    [persistSession]
+  );
+
+  const handleChangeTranslateLanguage = useCallback(
+    (nextLang: TranslationLanguage) => {
+      setSelectedTranslateLanguage(nextLang);
+      selectedTranslateLanguageRef.current = nextLang;
+      const current = activeSessionRef.current;
+      if (!current) return;
+      const educational = current.segments.filter(
+        (s) => s.isFinal && !s.isVoiceCommand && !s.isGapMarker && !s.isUnclearAudio
+      );
+      const lastEdu = educational[educational.length - 1];
+      if (lastEdu && !lastEdu.translations?.[nextLang]) {
+        void handleTranslateSegment(lastEdu.id, nextLang, current);
+      }
+    },
+    [handleTranslateSegment]
   );
 
   const finalizeAndGenerateNotes = useCallback(async () => {
@@ -512,8 +547,12 @@ export function App() {
         ...current,
         segments: [...current.segments, seg],
       };
+      activeSessionRef.current = updated;
       setActiveSession(updated);
       void persistSession(updated);
+      if (autoTranslateCaptionsRef.current && !isUnclearAudio) {
+        void handleTranslateSegment(seg.id, selectedTranslateLanguageRef.current, updated);
+      }
     },
     [
       finalizeAndGenerateNotes,
@@ -698,8 +737,12 @@ export function App() {
           languageDetected: step.languageDetected,
         };
         const updated = { ...current, segments: [...current.segments, seg] };
+        activeSessionRef.current = updated;
         setActiveSession(updated);
         void persistSession(updated);
+        if (autoTranslateCaptionsRef.current && !step.isUnclearAudio) {
+          void handleTranslateSegment(seg.id, selectedTranslateLanguageRef.current, updated);
+        }
       } else if (step.kind === 'command_highlight') {
         applyVoiceCommandOrAppend(step.text ?? '', [], false);
       } else if (step.kind === 'command_translate') {
@@ -1201,14 +1244,21 @@ export function App() {
 
       if (action.type === 'translate_last') {
         const target = activeSession ?? savedSessions[0];
-        const educational = target?.segments.filter((s) => s.isFinal && !s.isVoiceCommand && !s.isGapMarker) ?? [];
+        const educational = target?.segments.filter((s) => s.isFinal && !s.isVoiceCommand && !s.isGapMarker && !s.isUnclearAudio) ?? [];
         const lastEdu = educational[educational.length - 1];
-        if (!lastEdu) {
+        if (!target || !lastEdu) {
           speakCompanionReply(rawInput, 'No finalized explanation to translate.');
           return;
         }
-        await handleTranslateSegment(lastEdu.id, action.targetLanguage);
-        speakCompanionReply(rawInput, `Translated the latest explanation into ${action.targetLanguage.toUpperCase()}.`);
+        setTurnState('processing');
+        const result = await handleTranslateSegment(lastEdu.id, action.targetLanguage, target);
+        if (!result) {
+          speakCompanionReply(rawInput, 'Unable to translate the latest explanation.');
+          return;
+        }
+        const ttsLang =
+          action.targetLanguage === 'te' ? 'te-IN' : action.targetLanguage === 'hi' ? 'hi-IN' : 'en-IN';
+        speakCompanionReply(rawInput, result.translatedText, { lang: ttsLang });
         return;
       }
 
@@ -1700,6 +1750,14 @@ export function App() {
               void persistSession(updated);
             }}
             onTranslateSegment={handleTranslateSegment}
+            translateTarget={selectedTranslateLanguage}
+            onChangeTranslateTarget={handleChangeTranslateLanguage}
+            autoTranslateEnabled={autoTranslateCaptions}
+            onToggleAutoTranslate={() => {
+              const next = !autoTranslateCaptions;
+              setAutoTranslateCaptions(next);
+              autoTranslateCaptionsRef.current = next;
+            }}
             onOpenParticipation={() => setScreen('participation')}
             onStartDemo={startDemoSession}
             onDemoNextStep={() => {

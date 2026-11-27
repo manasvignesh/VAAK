@@ -143,17 +143,30 @@ export const DEMO_TRANSLATIONS: Record<string, Partial<Record<TranslationLanguag
     hi: 'दो मुख्य चरणों को याद रखें: प्रकाश-निर्भर अभिक्रियाएँ थायलाकोइड झिल्ली में होती हैं, और केल्विन चक्र स्ट्रोमा में होता है।',
     en: 'Remember the two main stages: Light-dependent reactions happen in the thylakoid membrane, and the Calvin Cycle happens in the stroma.',
   },
+  'Finally, oxygen is released as a byproduct, which supports all aerobic life on Earth.': {
+    te: 'చివరగా, ఆక్సిజన్ ఉప-ఉత్పత్తిగా విడుదలవుతుంది, ఇది భూమిపై ఉన్న అన్ని ఏరోబిక్ జీవరాశులకు ఆధారం.',
+    hi: 'अंत में, ऑक्सीजन एक उप-उत्पाद के रूप में निकलती है, जो पृथ्वी पर सभी एरोबिक जीवन को सहारा देती है।',
+    en: 'Finally, oxygen is released as a byproduct, which supports all aerobic life on Earth.',
+  },
+  'Chlorophyll is the green pigment inside leaf chloroplasts that absorbs light energy for photosynthesis.': {
+    te: 'క్లోరోఫిల్ అనేది ఆకులోని క్లోరోప్లాస్ట్‌లలో ఉండే ఆకుపచ్చ వర్ణద్రవ్యం, ఇది కిరణజన్య సంయోగక్రియ కోసం కాంతి శక్తిని గ్రహిస్తుంది.',
+    hi: 'क्लोरोफिल पत्ती के क्लोरोप्लास्ट के अंदर पाया जाने वाला हरा वर्णक है जो प्रकाश संश्लेषण के लिए प्रकाश ऊर्जा को अवशोषित करता है।',
+    en: 'Chlorophyll is the green pigment inside leaf chloroplasts that absorbs light energy for photosynthesis.',
+  },
 };
 
 export function getDemoTranslation(text: string, targetLanguage: TranslationLanguage): string {
   const exact = DEMO_TRANSLATIONS[text]?.[targetLanguage];
   if (exact) return exact;
-  const labels: Record<TranslationLanguage, string> = {
-    en: 'English (Demo)',
-    hi: 'हिन्दी (डेमो अनुवाद)',
-    te: 'తెలుగు (డెమో అనువాదం)',
-  };
-  return `[Demo ${labels[targetLanguage]}] ${text}`;
+  const normalized = text.trim().toLowerCase();
+  for (const [key, map] of Object.entries(DEMO_TRANSLATIONS)) {
+    if (normalized.includes(key.slice(0, 40).toLowerCase()) && map[targetLanguage]) {
+      return map[targetLanguage]!;
+    }
+  }
+  throw new Error(
+    'Sample translation is available for the built-in demo lecture explanations. Connect GEMINI_API_KEY to translate custom text.'
+  );
 }
 
 export function buildDemoStudyNotes(sessionId: string, segments: TranscriptSegment[]): StudyNotes {

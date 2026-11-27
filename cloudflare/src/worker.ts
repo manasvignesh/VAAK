@@ -92,38 +92,7 @@ export default {
 
       try {
         if (url.pathname === '/api/translate') {
-          if (url.pathname === '/api/ask') {
           const body = (await request.json()) as {
-            sessionTitle?: string;
-            question?: string;
-            previousAnswer?: string;
-            segments?: TranscriptSegment[];
-          };
-          if (
-            !body.sessionTitle?.trim() ||
-            !body.question?.trim() ||
-            !Array.isArray(body.segments) ||
-            body.segments.length === 0
-          ) {
-            return Response.json(
-              {
-                error: 'INVALID_REQUEST',
-                message: 'Provide a valid sessionTitle, question, and transcript segments.',
-              },
-              { status: 400 }
-            );
-          }
-          const qa = await askLectureOnWorker(
-            env,
-            body.sessionTitle.trim(),
-            body.question.trim(),
-            body.segments,
-            body.previousAnswer
-          );
-          return Response.json(qa);
-        }
-
-        const body = (await request.json()) as {
             text?: string;
             targetLanguage?: TranslationLanguage;
           };
