@@ -1,0 +1,25 @@
+name = "vaak-classroom"
+main = "cloudflare/src/worker.ts"
+compatibility_date = "2025-11-01"
+
+[assets]
+directory = "client/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/ws/*"]
+
+[[durable_objects.bindings]]
+name = "QUOTA_GUARD"
+class_name = "QuotaGuardDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["QuotaGuardDO"]
+
+[vars]
+LIVE_SERVICES_ENABLED = "true"
+GEMINI_MODEL = "gemini-flash-latest"
+GEMINI_FALLBACK_MODEL = "gemini-flash-lite-latest"
+GLOBAL_DAILY_AI_LIMIT = "250"
+GLOBAL_DAILY_AUDIO_MINUTES = "120"
+GLOBAL_MAX_CONCURRENT_WS = "25"
