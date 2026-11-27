@@ -49,7 +49,7 @@ export class AudioCaptureService {
       const name = err instanceof DOMException ? err.name : '';
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         throw new Error(
-          'Microphone permission was denied. MyVoice needs microphone access to transcribe classroom speech. Allow microphone access in your browser settings or try Demo Mode.'
+          'Microphone permission was denied. VAAK needs microphone access to transcribe classroom speech. Allow microphone access in your browser settings or try Demo Mode.'
         );
       }
       if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {

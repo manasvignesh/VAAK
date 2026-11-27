@@ -1,5 +1,6 @@
 import { Accessibility, BookOpen, FolderOpen, Home, MessageSquare, Radio } from 'lucide-react';
 import type { ScreenId } from '../types';
+import { VaakMark } from './VaakMark';
 
 interface TopNavProps {
   currentScreen: ScreenId;
@@ -40,12 +41,12 @@ export function TopNav({
             onClick={() => onNavigate('home')}
             className="flex items-center gap-2.5 rounded-xl px-1 py-1 text-left"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--mv-accent)] text-sm font-bold tracking-tight text-[var(--mv-accent-text)]">
-              MV
-            </span>
+            <VaakMark className="h-9 w-9 shrink-0" />
             <span>
-              <span className="block text-base font-bold tracking-tight leading-tight">MyVoice</span>
-              <span className="block text-xs text-[var(--mv-text-muted)]">Every Voice Matters</span>
+              <span className="block text-base font-bold tracking-tight leading-tight">VAAK</span>
+              <span className="block text-xs text-[var(--mv-text-muted)]">
+                Communication Without Barriers
+              </span>
             </span>
           </button>
 

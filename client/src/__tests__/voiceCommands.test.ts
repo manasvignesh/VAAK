@@ -78,15 +78,26 @@ describe('parseVoiceCommand', () => {
     expect(disabled.recognized).toBe(false);
   });
 
-  it('explains ambiguous MyVoice commands without executing them', () => {
-    const ambiguous = parseVoiceCommand('MyVoice, do something mysterious.', true);
+  it('explains ambiguous VAAK commands without executing them', () => {
+    const ambiguous = parseVoiceCommand('VAAK, do something mysterious.', true);
     expect(ambiguous.recognized).toBe(false);
-    expect(ambiguous.reason).toContain('Unrecognized MyVoice command');
+    expect(ambiguous.reason).toContain('Unrecognized VAAK command');
   });
 
-  it('detects standalone wake words when Deepgram splits "My voice," from the command body', () => {
+  it('recognizes VAAK, Vaak, VOC, and period-separated Deepgram outputs', () => {
+    const vaakPeriod = parseVoiceCommand('VAAK. Mark that as important.', true);
+    expect(vaakPeriod.recognized).toBe(true);
+    expect(vaakPeriod.action).toEqual({ type: 'mark_important' });
+
+    const vaakBookmark = parseVoiceCommand('Vaak, bookmark this topic.', true);
+    expect(vaakBookmark.recognized).toBe(true);
+    expect(vaakBookmark.action).toEqual({ type: 'bookmark_topic', label: undefined });
+
+    expect(isStandaloneWakeWord('VOC:')).toBe(true);
+    expect(isStandaloneWakeWord('VAAK,')).toBe(true);
     expect(isStandaloneWakeWord('My voice,')).toBe(true);
     expect(isStandaloneWakeWord('MyVoice!')).toBe(true);
     expect(isStandaloneWakeWord('This is my voice.')).toBe(false);
+    expect(isStandaloneWakeWord('Let us walk outside.')).toBe(false);
   });
 });

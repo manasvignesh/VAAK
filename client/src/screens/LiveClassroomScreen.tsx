@@ -186,7 +186,7 @@ export function LiveClassroomScreen({
               !isListening && !isReconnecting
                 ? 'Mic Inactive'
                 : settings.commandListeningEnabled
-                  ? '"MyVoice," Ready'
+                  ? '"VAAK," Ready'
                   : 'Commands Paused'
             }
           />
@@ -331,7 +331,7 @@ export function LiveClassroomScreen({
             {session.segments.length === 0 && !interimText && (
               <p className="text-base text-[var(--mv-text-muted)]">
                 Listening for classroom speech... Speak naturally or say{' '}
-                <code>&ldquo;MyVoice, mark that as important.&rdquo;</code>
+                <code>&ldquo;VAAK, mark that as important.&rdquo;</code>
               </p>
             )}
 
@@ -630,7 +630,7 @@ export function LiveClassroomScreen({
           ) : (
             <div className="space-y-2 text-xs text-[var(--mv-text-muted)]">
               <label className="flex cursor-pointer items-center justify-between rounded-xl border border-[var(--mv-border)] p-2.5 text-sm font-semibold text-[var(--mv-text)]">
-                <span>Listen for &ldquo;MyVoice,&rdquo;</span>
+                <span>Listen for &ldquo;VAAK,&rdquo;</span>
                 <input
                   type="checkbox"
                   checked={settings.commandListeningEnabled}
@@ -643,14 +643,16 @@ export function LiveClassroomScreen({
                   className="h-4 w-4 accent-[var(--mv-accent)]"
                 />
               </label>
-              <p className="pt-1 font-semibold text-[var(--mv-text)]">Supported Commands:</p>
+              <p className="pt-1 font-semibold text-[var(--mv-text)]">
+                Supported Commands (also accepts &ldquo;MyVoice,&rdquo;):
+              </p>
               <ul className="list-disc space-y-1.5 pl-4">
-                <li>&ldquo;MyVoice, start today&apos;s class on photosynthesis.&rdquo;</li>
-                <li>&ldquo;MyVoice, mark that definition as important.&rdquo;</li>
-                <li>&ldquo;MyVoice, translate the last explanation into Telugu.&rdquo;</li>
-                <li>&ldquo;MyVoice, bookmark this topic.&rdquo;</li>
-                <li>&ldquo;MyVoice, summarize what we covered so far.&rdquo;</li>
-                <li>&ldquo;MyVoice, end the class and prepare study notes.&rdquo;</li>
+                <li>&ldquo;VAAK, start today&apos;s class on photosynthesis.&rdquo;</li>
+                <li>&ldquo;VAAK, mark that definition as important.&rdquo;</li>
+                <li>&ldquo;VAAK, translate the last explanation into Telugu.&rdquo;</li>
+                <li>&ldquo;VAAK, bookmark this topic.&rdquo;</li>
+                <li>&ldquo;VAAK, summarize what we covered so far.&rdquo;</li>
+                <li>&ldquo;VAAK, end the class and prepare study notes.&rdquo;</li>
               </ul>
             </div>
           )}

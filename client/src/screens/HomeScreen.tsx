@@ -1,6 +1,7 @@
 import { Accessibility, ArrowRight, FolderOpen, MessageSquare, Mic, Play, ShieldCheck } from 'lucide-react';
 import type { AppCapabilities, ScreenId } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
+import { VaakMark } from '../components/VaakMark';
 
 interface HomeScreenProps {
   capabilities: AppCapabilities | null;
@@ -27,11 +28,9 @@ export function HomeScreen({
       <section className="rounded-[var(--mv-radius-lg)] border border-[var(--mv-border)] bg-[var(--mv-surface)] p-6 shadow-[var(--mv-shadow-sm)] sm:p-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mv-accent)] text-xs font-bold text-[var(--mv-accent-text)]">
-              MV
-            </span>
+            <VaakMark className="h-8 w-8 shrink-0" />
             <span className="text-sm font-bold tracking-wide uppercase text-[var(--mv-accent)]">
-              MyVoice • Inclusive Classroom
+              VAAK • Speak. Understand. Participate.
             </span>
           </div>
 
@@ -48,7 +47,7 @@ export function HomeScreen({
         </div>
 
         <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
-          Every Voice Matters.
+          Communication Without Barriers.
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--mv-text-muted)] sm:text-lg">
           A two-way classroom communication and learning workspace built for Indian schools and
@@ -115,7 +114,7 @@ export function HomeScreen({
           <p className="mt-2 text-sm leading-relaxed text-[var(--mv-text-muted)]">
             Speak naturally in English, Hindi, Telugu, or mixed speech. Prefix commands with{' '}
             <code className="rounded bg-[var(--mv-surface-alt)] px-1.5 py-0.5 font-semibold">
-              MyVoice,
+              VAAK,
             </code>{' '}
             to highlight, bookmark, translate, or prepare study notes.
           </p>

@@ -53,7 +53,7 @@ export const DEMO_PHOTOSYNTHESIS_STEPS: DemoStep[] = [
   {
     delayMs: 2400,
     kind: 'command_highlight',
-    text: 'MyVoice, mark that definition as important.',
+    text: 'VAAK, mark that definition as important.',
   },
   {
     delayMs: 3000,
@@ -75,7 +75,7 @@ export const DEMO_PHOTOSYNTHESIS_STEPS: DemoStep[] = [
   {
     delayMs: 2600,
     kind: 'command_translate',
-    text: 'MyVoice, translate the last explanation into Telugu.',
+    text: 'VAAK, translate the last explanation into Telugu.',
     targetLanguage: 'te',
   },
   {
@@ -107,7 +107,7 @@ export const DEMO_PHOTOSYNTHESIS_STEPS: DemoStep[] = [
   {
     delayMs: 2200,
     kind: 'command_bookmark',
-    text: 'MyVoice, bookmark this topic.',
+    text: 'VAAK, bookmark this topic.',
     bookmarkLabel: 'Light Reactions & Calvin Cycle',
   },
   {

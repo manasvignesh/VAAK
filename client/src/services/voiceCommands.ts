@@ -1,7 +1,7 @@
 import type { TranslationLanguage, VoiceCommandMatch } from '../types';
 
-const WAKE_PREFIX_REGEX = /^\s*(?:my\s*voice|myvoice)[\s,:\-–—]+(.+)$/i;
-const STANDALONE_WAKE_REGEX = /^\s*(?:my\s*voice|myvoice)[\s,.:!?-]*$/i;
+const WAKE_PREFIX_REGEX = /^\s*(?:vaak|vak|voc|my\s*voice|myvoice)[\s,.:;\-–—]+(.+)$/i;
+const STANDALONE_WAKE_REGEX = /^\s*(?:vaak|vak|voc|my\s*voice|myvoice)[\s,.:!?-]*$/i;
 
 export function isStandaloneWakeWord(rawText: string): boolean {
   return STANDALONE_WAKE_REGEX.test(rawText.trim());
@@ -130,6 +130,6 @@ export function parseVoiceCommand(
     rawText: trimmed,
     recognized: false,
     requiresConfirmation: false,
-    reason: `Unrecognized MyVoice command: "${body}". Try "mark that as important", "translate into Telugu", "bookmark this topic", or "end the class and prepare study notes".`,
+    reason: `Unrecognized VAAK command: "${body}". Try "mark that as important", "translate into Telugu", "bookmark this topic", or "end the class and prepare study notes".`,
   };
 }

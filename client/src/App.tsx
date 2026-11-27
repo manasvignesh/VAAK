@@ -42,11 +42,11 @@ import { SmartNotesScreen } from './screens/SmartNotesScreen';
 import { MyClassesScreen } from './screens/MyClassesScreen';
 
 const SCREEN_TITLES: Record<ScreenId, string> = {
-  home: 'Home | MyVoice — Every Voice Matters',
-  classroom: 'Live Classroom | MyVoice',
-  participation: 'Student Participation | MyVoice',
-  notes: 'Smart Study Notes | MyVoice',
-  classes: 'My Classes | MyVoice',
+  home: 'Home | VAAK — Communication Without Barriers',
+  classroom: 'Live Classroom | VAAK',
+  participation: 'Student Participation | VAAK',
+  notes: 'Smart Study Notes | VAAK',
+  classes: 'My Classes | VAAK',
 };
 
 export function App() {
@@ -323,7 +323,7 @@ export function App() {
         pendingWakeUntilRef.current = Date.now() + 6000;
         setCommandFeedback({
           tone: 'info',
-          message: 'Wake word "MyVoice" heard — listening for command...',
+          message: 'Wake word "VAAK" heard — listening for command...',
         });
         return;
       }
@@ -331,7 +331,7 @@ export function App() {
       let candidateText = text;
       if (settings.commandListeningEnabled && Date.now() <= pendingWakeUntilRef.current) {
         pendingWakeUntilRef.current = 0;
-        candidateText = `MyVoice, ${text}`;
+        candidateText = `VAAK, ${text}`;
       }
 
       const parsed = parseVoiceCommand(candidateText, settings.commandListeningEnabled);

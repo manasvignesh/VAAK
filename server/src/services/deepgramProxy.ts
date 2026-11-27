@@ -39,10 +39,23 @@ export function attachTranscriptionWebSocket(server: Server, config: ServerConfi
   const wss = new WebSocketServer({ server, path: '/ws/transcribe', maxPayload: 128 * 1024 });
   const activeConnectionsByIp = new Map<string, number>();
   const MAX_CONCURRENT_PER_IP = 5;
+  const parsedGlobalWs = Number.parseInt(process.env.GLOBAL_MAX_CONCURRENT_WS ?? '25', 10);
+  const MAX_GLOBAL_CONCURRENT_WS = Number.isFinite(parsedGlobalWs) && parsedGlobalWs > 0 ? parsedGlobalWs : 25;
   const MAX_SESSION_DURATION_MS = 20 * 60 * 1000;
 
   wss.on('connection', (clientWs: WebSocket, req: IncomingMessage) => {
     const clientIp = req.socket.remoteAddress || 'unknown';
+    const totalActive = Array.from(activeConnectionsByIp.values()).reduce((a, b) => a + b, 0);
+    if (totalActive >= MAX_GLOBAL_CONCURRENT_WS) {
+      sendJson(clientWs, {
+        type: 'error',
+        code: 'GLOBAL_WS_CAPACITY_REACHED',
+        message: 'Live transcription capacity reached. Please use Interactive Demo Mode or retry shortly.',
+        recoverable: false,
+      });
+      clientWs.close(1013, 'Server busy');
+      return;
+    }
     const currentCount = activeConnectionsByIp.get(clientIp) ?? 0;
     if (currentCount >= MAX_CONCURRENT_PER_IP) {
       sendJson(clientWs, {

@@ -30,7 +30,7 @@ function formatTimestamp(ms: number): string {
 
 export function notesToMarkdown(session: ClassroomSession, notes: StudyNotes): string {
   const lines: string[] = [
-    `# ${session.title} — Study Notes`,
+    `# ${session.title} — Study Notes (VAAK)`,
     `Generated: ${new Date(notes.generatedAtIso).toLocaleString()}`,
     notes.isDemo ? '> Note: Generated from Interactive Demo Mode' : '> Source: Live Classroom Transcript',
     '',

@@ -37,3 +37,30 @@ export function createIpRateLimiter(options: {
     next();
   };
 }
+
+export function createGlobalDailyLimiter(options: {
+  maxDailyRequests: number;
+  message: string;
+}) {
+  let dayKey = new Date().toISOString().slice(0, 10);
+  let count = 0;
+
+  return (_req: Request, res: Response, next: NextFunction): void => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (today !== dayKey) {
+      dayKey = today;
+      count = 0;
+    }
+
+    if (count >= options.maxDailyRequests) {
+      res.status(429).json({
+        error: 'GLOBAL_BUDGET_EXCEEDED',
+        message: options.message,
+      });
+      return;
+    }
+
+    count += 1;
+    next();
+  };
+}
