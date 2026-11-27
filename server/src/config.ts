@@ -7,15 +7,20 @@ export interface ServerConfig {
   geminiApiKey: string | null;
   geminiModel: string;
   geminiFallbackModel: string | null;
+  liveServicesEnabled: boolean;
+  globalDailyAudioMinutes: number;
 }
 
 export function loadConfig(): ServerConfig {
   const port = Number.parseInt(process.env.PORT ?? '3000', 10);
-  const deepgramApiKey = process.env.DEEPGRAM_API_KEY?.trim() || null;
-  const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || null;
+  const liveServicesEnabled =
+    (process.env.LIVE_SERVICES_ENABLED ?? 'true').trim().toLowerCase() !== 'false';
+  const deepgramApiKey = liveServicesEnabled ? process.env.DEEPGRAM_API_KEY?.trim() || null : null;
+  const geminiApiKey = liveServicesEnabled ? process.env.GEMINI_API_KEY?.trim() || null : null;
   const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-flash-latest';
   const geminiFallbackModel =
     process.env.GEMINI_FALLBACK_MODEL?.trim() || 'gemini-flash-lite-latest';
+  const parsedAudioMins = Number.parseInt(process.env.GLOBAL_DAILY_AUDIO_MINUTES ?? '120', 10);
 
   return {
     port: Number.isFinite(port) && port > 0 ? port : 3000,
@@ -23,6 +28,9 @@ export function loadConfig(): ServerConfig {
     geminiApiKey,
     geminiModel,
     geminiFallbackModel: geminiFallbackModel !== geminiModel ? geminiFallbackModel : null,
+    liveServicesEnabled,
+    globalDailyAudioMinutes:
+      Number.isFinite(parsedAudioMins) && parsedAudioMins > 0 ? parsedAudioMins : 120,
   };
 }
 

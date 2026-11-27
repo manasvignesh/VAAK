@@ -131,4 +131,41 @@ describe('MyVoice API & WebSocket routes (key-free startup)', () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
+
+  it('disables live AI and WS services when LIVE_SERVICES_ENABLED=false while keeping demo health up', async () => {
+    process.env.DEEPGRAM_API_KEY = 'dummy-dg';
+    process.env.GEMINI_API_KEY = 'dummy-gm';
+    process.env.LIVE_SERVICES_ENABLED = 'false';
+
+    const { server } = createApp();
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const addr = server.address();
+    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    try {
+      const caps = await httpRequest(baseUrl, 'GET', '/api/capabilities');
+      expect(caps.status).toBe(200);
+      expect(caps.body.speechToTextConfigured).toBe(false);
+      expect(caps.body.aiNotesAndTranslationConfigured).toBe(false);
+      expect(caps.body.demoModeAvailable).toBe(true);
+
+      const wsMsg = await new Promise<Record<string, unknown>>((resolve, reject) => {
+        const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/transcribe`);
+        ws.on('message', (raw) => {
+          const parsed = JSON.parse(raw.toString()) as Record<string, unknown>;
+          ws.close();
+          resolve(parsed);
+        });
+        ws.on('error', reject);
+      });
+      expect(wsMsg.type).toBe('error');
+      expect(wsMsg.code).toBe('LIVE_SERVICES_DISABLED');
+    } finally {
+      delete process.env.DEEPGRAM_API_KEY;
+      delete process.env.GEMINI_API_KEY;
+      delete process.env.LIVE_SERVICES_ENABLED;
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
 });

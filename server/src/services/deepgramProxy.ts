@@ -43,8 +43,32 @@ export function attachTranscriptionWebSocket(server: Server, config: ServerConfi
   const MAX_GLOBAL_CONCURRENT_WS = Number.isFinite(parsedGlobalWs) && parsedGlobalWs > 0 ? parsedGlobalWs : 25;
   const MAX_SESSION_DURATION_MS = 20 * 60 * 1000;
 
+  let audioDayKey = new Date().toISOString().slice(0, 10);
+  let dailyAudioBytes = 0;
+
+  const isAudioBudgetExceeded = (sampleRate: number): boolean => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (today !== audioDayKey) {
+      audioDayKey = today;
+      dailyAudioBytes = 0;
+    }
+    const maxDailyBytes = config.globalDailyAudioMinutes * 60 * sampleRate * 2;
+    return dailyAudioBytes >= maxDailyBytes;
+  };
+
   wss.on('connection', (clientWs: WebSocket, req: IncomingMessage) => {
     const clientIp = req.socket.remoteAddress || 'unknown';
+    if (!config.liveServicesEnabled) {
+      sendJson(clientWs, {
+        type: 'error',
+        code: 'LIVE_SERVICES_DISABLED',
+        message:
+          'Live speech recognition is temporarily paused. Interactive Demo Mode remains available.',
+        recoverable: false,
+      });
+      clientWs.close(1008, 'Live services disabled');
+      return;
+    }
     const totalActive = Array.from(activeConnectionsByIp.values()).reduce((a, b) => a + b, 0);
     if (totalActive >= MAX_GLOBAL_CONCURRENT_WS) {
       sendJson(clientWs, {
@@ -268,6 +292,20 @@ export function attachTranscriptionWebSocket(server: Server, config: ServerConfi
 
     clientWs.on('message', (data: WebSocket.RawData, isBinary: boolean) => {
       if (isBinary) {
+        if (isAudioBudgetExceeded(activeSampleRate)) {
+          sendJson(clientWs, {
+            type: 'error',
+            code: 'GLOBAL_AUDIO_BUDGET_EXCEEDED',
+            message:
+              'Daily live speech-recognition audio budget reached. Interactive Demo Mode remains available.',
+            recoverable: false,
+          });
+          cleanupDeepgram();
+          clientWs.close(1008, 'Daily audio budget reached');
+          return;
+        }
+        const chunkLen = Buffer.isBuffer(data) ? data.byteLength : Array.isArray(data) ? data.reduce((s, b) => s + b.byteLength, 0) : data.byteLength;
+        dailyAudioBytes += chunkLen;
         if (deepgramWs && deepgramWs.readyState === WebSocket.OPEN) {
           deepgramWs.send(data);
         }

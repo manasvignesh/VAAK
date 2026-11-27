@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: vaak-classroom
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: LIVE_SERVICES_ENABLED
+        value: true
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+      - key: GEMINI_FALLBACK_MODEL
+        value: gemini-flash-lite-latest
+      - key: GLOBAL_DAILY_AI_LIMIT
+        value: 250
+      - key: GLOBAL_DAILY_AUDIO_MINUTES
+        value: 120
+      - key: GLOBAL_MAX_CONCURRENT_WS
+        value: 25
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
