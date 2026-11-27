@@ -109,6 +109,7 @@ export function App() {
   const [voiceModeEnabled, setVoiceModeEnabled] = useState(false);
   const [turnState, setTurnState] = useState<VoiceTurnState>('idle');
   const [companionResponse, setCompanionResponse] = useState('');
+  const [companionError, setCompanionError] = useState<string | null>(null);
   const [companionSource, setCompanionSource] = useState<string | undefined>(undefined);
   const [companionHistory, setCompanionHistory] = useState<CompanionTurn[]>([]);
   const [previousQaAnswer, setPreviousQaAnswer] = useState<string | undefined>(undefined);
@@ -132,6 +133,16 @@ export function App() {
   const activeSessionRef = useRef<ClassroomSession | null>(null);
   const interimTextRef = useRef<string>('');
   const pendingWakeUntilRef = useRef<number>(0);
+  const voiceModeEnabledRef = useRef(voiceModeEnabled);
+  const turnStateRef = useRef<VoiceTurnState>(turnState);
+
+  useEffect(() => {
+    voiceModeEnabledRef.current = voiceModeEnabled;
+  }, [voiceModeEnabled]);
+
+  useEffect(() => {
+    turnStateRef.current = turnState;
+  }, [turnState]);
 
   useEffect(() => {
     activeSessionRef.current = activeSession;
@@ -274,6 +285,12 @@ export function App() {
     const pendingInterim = interimTextRef.current.trim();
     speechSocketRef.current.stop();
     setInterimText('');
+    if (voiceModeEnabledRef.current) {
+      voiceModeEnabledRef.current = false;
+      setVoiceModeEnabled(false);
+      turnStateRef.current = 'idle';
+      setTurnState('idle');
+    }
 
     const current = activeSessionRef.current ?? currentBeforeStop;
     let segmentsToFinalize = current.segments;
@@ -524,6 +541,14 @@ export function App() {
     setStatusMessage('Requesting microphone permission...');
 
     try {
+      if (voiceModeEnabledRef.current) {
+        speechSocketRef.current.stop();
+        audioCaptureRef.current.stop();
+        voiceModeEnabledRef.current = false;
+        setVoiceModeEnabled(false);
+        turnStateRef.current = 'idle';
+        setTurnState('idle');
+      }
       await audioCaptureRef.current.start({
         onPcmChunk: (buf) => speechSocketRef.current.sendAudio(buf),
         onLevel: setMicLevel,
@@ -809,10 +834,14 @@ export function App() {
       ]);
 
       const shouldSpeak =
-        options.forceSpeak || (voiceModeEnabled && (settings.autoSpeakResponses ?? true));
+        options.forceSpeak || (voiceModeEnabledRef.current && (settings.autoSpeakResponses ?? true));
       if (!shouldSpeak) {
         setPoliteAnnouncement(replyText);
-        setTurnState(voiceModeEnabled ? 'listening' : 'idle');
+        if (turnStateRef.current !== 'error') {
+          const nextState = voiceModeEnabledRef.current ? 'listening' : 'idle';
+          turnStateRef.current = nextState;
+          setTurnState(nextState);
+        }
         return;
       }
 
@@ -828,17 +857,25 @@ export function App() {
         rate: settings.speechRate ?? 1.0,
         onStateChange: (st) => {
           if (st === 'speaking') {
-            setTurnState('speaking');
+            if (turnStateRef.current !== 'error') {
+              turnStateRef.current = 'speaking';
+              setTurnState('speaking');
+            }
           } else if (st === 'paused') {
+            turnStateRef.current = 'interrupted';
             setTurnState('interrupted');
           } else {
             audioCaptureRef.current.setMuted(false);
-            setTurnState(voiceModeEnabled ? 'listening' : 'idle');
+            if (turnStateRef.current !== 'error' && turnStateRef.current !== 'interrupted') {
+              const nextState = voiceModeEnabledRef.current ? 'listening' : 'idle';
+              turnStateRef.current = nextState;
+              setTurnState(nextState);
+            }
           }
         },
       });
     },
-    [settings.autoSpeakResponses, settings.preferredSpeechLang, settings.speechRate, voiceModeEnabled]
+    [settings.autoSpeakResponses, settings.preferredSpeechLang, settings.speechRate]
   );
 
   const stopCompanionMic = useCallback(() => {
@@ -846,10 +883,13 @@ export function App() {
       window.clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = null;
     }
-    if (recordingState === 'idle' || recordingState === 'completed') {
+    if (recordingState === 'idle' || recordingState === 'completed' || recordingState === 'error') {
       stopLiveAudioAndSocket();
     }
+    setCompanionError(null);
+    voiceModeEnabledRef.current = false;
     setVoiceModeEnabled(false);
+    turnStateRef.current = 'idle';
     setTurnState('idle');
   }, [recordingState, stopLiveAudioAndSocket]);
 
@@ -1269,13 +1309,12 @@ export function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [turnState]);
 
-  const handleToggleVoiceMode = async () => {
-    if (voiceModeEnabled) {
-      stopCompanionMic();
-      return;
-    }
+  const startCompanionVoice = async () => {
+    setCompanionError(null);
     if (!capabilities?.speechToTextConfigured) {
+      voiceModeEnabledRef.current = true;
       setVoiceModeEnabled(true);
+      turnStateRef.current = 'idle';
       setTurnState('idle');
       speakCompanionReply(
         'Activate Voice Mode',
@@ -1284,8 +1323,10 @@ export function App() {
       );
       return;
     }
-    if (recordingState === 'listening') {
+    if (recordingState === 'listening' || recordingState === 'connecting' || recordingState === 'reconnecting') {
+      voiceModeEnabledRef.current = true;
       setVoiceModeEnabled(true);
+      turnStateRef.current = 'listening';
       setTurnState('listening');
       speakCompanionReply('Activate Voice Mode', 'Voice Mode active alongside live classroom.', {
         forceSpeak: true,
@@ -1293,43 +1334,116 @@ export function App() {
       return;
     }
 
+    stopLiveAudioAndSocket();
+    let announcedReady = false;
+
     try {
+      voiceModeEnabledRef.current = true;
       setVoiceModeEnabled(true);
-      setTurnState('listening');
+      turnStateRef.current = 'processing';
+      setTurnState('processing');
+      setCompanionResponse('Connecting microphone and Deepgram speech recognition...');
+
       await audioCaptureRef.current.start({
         onPcmChunk: (buf) => speechSocketRef.current.sendAudio(buf),
         onLevel: setMicLevel,
         onError: (msg) => {
+          turnStateRef.current = 'error';
           setTurnState('error');
+          setCompanionError(msg);
           setCompanionResponse(msg);
+          setAssertiveAnnouncement(msg);
         },
       });
+
       speechSocketRef.current.connect('multi', audioCaptureRef.current.getSampleRate(), {
         onMessage: (msg) => {
-          if (msg.type === 'transcript') {
+          if (msg.type === 'ready' || (msg.type === 'status' && msg.status === 'connected')) {
+            setCompanionError(null);
+            if (!announcedReady) {
+              announcedReady = true;
+              turnStateRef.current = 'listening';
+              setTurnState('listening');
+              speakCompanionReply(
+                'Activate Voice Mode',
+                'Voice Mode is listening. Say "What can I do?" to hear available actions.',
+                { forceSpeak: true }
+              );
+            } else if (turnStateRef.current !== 'speaking') {
+              turnStateRef.current = 'listening';
+              setTurnState('listening');
+            }
+          } else if (msg.type === 'status' && msg.status === 'reconnecting') {
+            turnStateRef.current = 'processing';
+            setTurnState('processing');
+            setCompanionResponse(msg.message || 'Reconnecting speech recognition...');
+          } else if (msg.type === 'transcript') {
             if (!msg.isFinal) {
+              turnStateRef.current = 'recognizing';
               setTurnState('recognizing');
             } else {
               void handleGlobalCommand(msg.text);
             }
           } else if (msg.type === 'error') {
+            turnStateRef.current = 'error';
             setTurnState('error');
+            setCompanionError(msg.message);
             setCompanionResponse(msg.message);
+            setAssertiveAnnouncement(msg.message);
+            if (!msg.recoverable) {
+              audioCaptureRef.current.stop();
+              speechSocketRef.current.stop();
+              voiceModeEnabledRef.current = false;
+              setVoiceModeEnabled(false);
+            }
           }
         },
-        onUnexpectedClose: () => setTurnState('error'),
-        onReconnected: () => setTurnState('listening'),
+        onUnexpectedClose: ({ code, reason }) => {
+          const detail = reason ? `${reason} (code ${code})` : `WebSocket closed (code ${code})`;
+          const msg = `Live speech recognition connection interrupted: ${detail}. Retrying...`;
+          turnStateRef.current = 'error';
+          setTurnState('error');
+          setCompanionError(msg);
+          setCompanionResponse(msg);
+        },
+        onReconnectFailed: ({ code, reason }) => {
+          audioCaptureRef.current.stop();
+          speechSocketRef.current.stop();
+          const detail = reason ? `${reason} (code ${code})` : `code ${code}`;
+          const msg = `Could not reach the live speech recognition backend (/ws/transcribe, ${detail}). Verify the VAAK server is running, then select Retry Voice Mode or type commands below.`;
+          turnStateRef.current = 'error';
+          setTurnState('error');
+          setCompanionError(msg);
+          setCompanionResponse(msg);
+          setAssertiveAnnouncement(msg);
+        },
+        onReconnected: () => {
+          setCompanionError(null);
+          turnStateRef.current = 'listening';
+          setTurnState('listening');
+          setCompanionResponse('Reconnected to live speech recognition.');
+        },
       });
-      speakCompanionReply(
-        'Activate Voice Mode',
-        'Voice Mode is listening. Say "What can I do?" to hear available actions.',
-        { forceSpeak: true }
-      );
     } catch (err) {
+      audioCaptureRef.current.stop();
+      speechSocketRef.current.stop();
+      voiceModeEnabledRef.current = false;
       setVoiceModeEnabled(false);
+      turnStateRef.current = 'error';
       setTurnState('error');
-      setCompanionResponse(err instanceof Error ? err.message : 'Microphone access failed.');
+      const msg = err instanceof Error ? err.message : 'Microphone access failed.';
+      setCompanionError(msg);
+      setCompanionResponse(msg);
+      setAssertiveAnnouncement(msg);
     }
+  };
+
+  const handleToggleVoiceMode = async () => {
+    if (voiceModeEnabled) {
+      stopCompanionMic();
+      return;
+    }
+    await startCompanionVoice();
   };
 
   return (
@@ -1350,8 +1464,10 @@ export function App() {
         autoSpeakEnabled={settings.autoSpeakResponses ?? true}
         currentResponse={companionResponse}
         currentSourceSummary={companionSource}
+        errorMessage={companionError}
         history={companionHistory}
         onToggleVoiceMode={() => void handleToggleVoiceMode()}
+        onRetryVoiceMode={() => void startCompanionVoice()}
         onSubmitCommandText={(txt) => void handleGlobalCommand(txt)}
         onStopSpeaking={() => {
           qaAbortRef.current?.abort();

@@ -27,8 +27,10 @@ interface VoiceCompanionBarProps {
   autoSpeakEnabled: boolean;
   currentResponse: string;
   currentSourceSummary?: string;
+  errorMessage?: string | null;
   history: CompanionTurn[];
   onToggleVoiceMode: () => void;
+  onRetryVoiceMode?: () => void;
   onSubmitCommandText: (text: string) => void;
   onStopSpeaking: () => void;
   onPauseSpeaking: () => void;
@@ -44,8 +46,10 @@ export function VoiceCompanionBar({
   autoSpeakEnabled,
   currentResponse,
   currentSourceSummary,
+  errorMessage,
   history,
   onToggleVoiceMode,
+  onRetryVoiceMode,
   onSubmitCommandText,
   onStopSpeaking,
   onPauseSpeaking,
@@ -211,8 +215,43 @@ export function VoiceCompanionBar({
           </button>
         </form>
 
+        {/* Accessible Error Banner & Recovery */}
+        {(turnState === 'error' || errorMessage) && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-[var(--mv-border)] bg-[var(--mv-amber)] px-3.5 py-2 text-sm font-bold text-[#151515]"
+          >
+            <span>
+              {errorMessage ||
+                'Voice recognition hit an unexpected error. Check microphone permission and server connection, then retry.'}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {onRetryVoiceMode && (
+                <button
+                  type="button"
+                  onClick={onRetryVoiceMode}
+                  className="nb-btn inline-flex min-h-9 items-center gap-1.5 bg-[var(--mv-lime)] px-3 py-1 text-xs font-bold text-[#151515]"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Retry Voice Mode</span>
+                </button>
+              )}
+              {voiceModeEnabled && (
+                <button
+                  type="button"
+                  onClick={onToggleVoiceMode}
+                  className="nb-btn inline-flex min-h-9 items-center gap-1.5 bg-[var(--mv-surface)] px-3 py-1 text-xs font-bold text-[var(--mv-text)]"
+                >
+                  <MicOff className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Turn Off Voice Mode</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Visual Companion Response */}
-        {currentResponse && (
+        {currentResponse && turnState !== 'error' && !errorMessage && (
           <div
             role="status"
             className="rounded-xl border-2 border-[var(--mv-border)] bg-[var(--mv-surface)] px-3.5 py-2 text-sm font-semibold"
