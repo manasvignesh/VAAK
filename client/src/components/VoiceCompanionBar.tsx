@@ -84,16 +84,16 @@ export function VoiceCompanionBar({
     <section
       aria-label="VAAK Voice Companion"
       data-tour-id="voice-companion-bar"
-      className="border-b-[3px] border-[var(--mv-border)] bg-[var(--mv-surface-alt)] px-4 py-2.5"
+      className="border-b-[3px] border-[var(--mv-border)] bg-[var(--mv-surface-alt)] px-3 py-2 sm:px-4 sm:py-2.5"
     >
-      <div className="mx-auto flex max-w-7xl flex-col gap-2.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:gap-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               aria-pressed={voiceModeEnabled}
               onClick={onToggleVoiceMode}
-              className={`nb-btn inline-flex min-h-10 items-center gap-2 px-3.5 py-1.5 text-xs font-bold text-[#151515] ${
+              className={`nb-btn inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-1.5 sm:text-xs ${
                 voiceModeEnabled ? 'bg-[var(--mv-lime)]' : 'bg-[var(--mv-surface)] text-[var(--mv-text)]'
               }`}
             >
@@ -157,28 +157,28 @@ export function VoiceCompanionBar({
             <button
               type="button"
               onClick={onResumeSpeaking}
-              className="nb-btn inline-flex min-h-9 items-center gap-1 bg-[var(--mv-surface)] px-2.5 py-1 text-xs font-bold"
+              className="nb-btn inline-flex min-h-8 items-center gap-1 bg-[var(--mv-surface)] px-2 py-1 text-[11px] font-bold sm:min-h-9 sm:px-2.5 sm:text-xs"
               title="Resume paused speech"
             >
-              <Play className="h-3.5 w-3.5" aria-hidden="true" />
+              <Play className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
               <span>Continue</span>
             </button>
 
             <button
               type="button"
               onClick={onRepeatLast}
-              className="nb-btn inline-flex min-h-9 items-center gap-1 bg-[var(--mv-surface)] px-2.5 py-1 text-xs font-bold"
+              className="nb-btn inline-flex min-h-8 items-center gap-1 bg-[var(--mv-surface)] px-2 py-1 text-[11px] font-bold sm:min-h-9 sm:px-2.5 sm:text-xs"
             >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              <RotateCcw className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
               <span>Repeat</span>
             </button>
 
             <button
               type="button"
               onClick={onShowHelp}
-              className="nb-btn inline-flex min-h-9 items-center gap-1 bg-[var(--mv-lavender)] px-2.5 py-1 text-xs font-bold text-[#151515]"
+              className="nb-btn inline-flex min-h-8 items-center gap-1 bg-[var(--mv-lavender)] px-2 py-1 text-[11px] font-bold text-[#151515] sm:min-h-9 sm:px-2.5 sm:text-xs"
             >
-              <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              <HelpCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
               <span>What Can I Do?</span>
             </button>
 
@@ -186,9 +186,9 @@ export function VoiceCompanionBar({
               type="button"
               aria-expanded={showHistory}
               onClick={() => setShowHistory((s) => !s)}
-              className="nb-btn inline-flex min-h-9 items-center gap-1 bg-[var(--mv-surface)] px-2.5 py-1 text-xs font-bold"
+              className="nb-btn inline-flex min-h-8 items-center gap-1 bg-[var(--mv-surface)] px-2 py-1 text-[11px] font-bold sm:min-h-9 sm:px-2.5 sm:text-xs"
             >
-              <History className="h-3.5 w-3.5" aria-hidden="true" />
+              <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
               <span>History ({history.length})</span>
             </button>
           </div>

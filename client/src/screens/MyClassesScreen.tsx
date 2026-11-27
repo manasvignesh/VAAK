@@ -60,7 +60,7 @@ export function MyClassesScreen({
   return (
     <div
       data-tour-id="my-classes-panel"
-      className="mx-auto max-w-5xl space-y-5 px-4 py-6 sm:py-8"
+      className="mx-auto max-w-5xl space-y-4 px-3 py-4 sm:space-y-5 sm:px-4 sm:py-8"
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

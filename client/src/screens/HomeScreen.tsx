@@ -32,22 +32,22 @@ export function HomeScreen({
   const recentSessions = savedSessions.slice(0, 3);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:py-10">
+    <div className="mx-auto max-w-6xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-4 sm:py-10">
       {/* Asymmetric Neo-Brutalist Interactive Workspace */}
-      <section className="nb-card-lg grid min-w-0 gap-6 overflow-hidden bg-[var(--mv-surface)] p-5 sm:p-8 lg:grid-cols-12 lg:items-center">
-        <div className="min-w-0 space-y-5 lg:col-span-8">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <VaakMark className="h-9 w-9 shrink-0" />
-            <span className="nb-pill bg-[var(--mv-lavender)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#151515]">
+      <section className="nb-card-lg grid min-w-0 gap-4 overflow-hidden bg-[var(--mv-surface)] p-4 sm:gap-6 sm:p-8 lg:grid-cols-12 lg:items-center">
+        <div className="min-w-0 space-y-3 sm:space-y-5 lg:col-span-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <VaakMark className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" />
+            <span className="nb-pill bg-[var(--mv-lavender)] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#151515] sm:px-3 sm:py-1 sm:text-xs">
               VAAK • Speak. Understand. Participate.
             </span>
           </div>
 
-          <h1 className="text-4xl font-bold tracking-tight leading-[1.05] sm:text-5xl">
+          <h1 className="text-3xl font-bold tracking-tight leading-[1.06] sm:text-5xl">
             Communication Without Barriers.
           </h1>
 
-          <p className="max-w-2xl text-base font-medium leading-relaxed text-[var(--mv-text-muted)] sm:text-lg">
+          <p className="max-w-2xl text-sm font-medium leading-relaxed text-[var(--mv-text-muted)] sm:text-lg">
             A voice-first, two-way Indian classroom workspace. Deaf and hard-of-hearing students
             follow live multilingual captions with uncertainty indicators and evidence-linked notes—while
             students with speech disabilities participate aloud through accessible text-to-speech.

@@ -171,11 +171,11 @@ export function LiveClassroomScreen({
   };
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 pb-24 lg:pb-6">
+    <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-3 pb-24 sm:gap-4 sm:px-4 sm:py-4 lg:pb-6">
       {/* Top Status & Controls Bar */}
       <section
         aria-label="Classroom session status"
-        className="nb-card flex flex-wrap items-center justify-between gap-3 bg-[var(--mv-surface)] px-4 py-3"
+        className="nb-card flex flex-wrap items-center justify-between gap-2.5 bg-[var(--mv-surface)] p-3 sm:gap-3 sm:px-4 sm:py-3"
       >
         <div className="flex flex-wrap items-center gap-3">
           {!isFocusMode && (

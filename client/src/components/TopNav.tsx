@@ -28,7 +28,7 @@ export function TopNav({
   ];
 
   return (
-    <header className="sticky top-0 z-30 border-b-[3px] border-[var(--mv-border)] bg-[var(--mv-surface)]">
+    <header className="z-30 border-b-[3px] border-[var(--mv-border)] bg-[var(--mv-surface)] sm:sticky sm:top-0">
       <a
         href="#main-content"
         className="nb-btn visually-hidden bg-[var(--mv-lime)] px-4 py-2 font-bold text-[#151515] focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50"
@@ -36,17 +36,17 @@ export function TopNav({
         Skip to main content
       </a>
 
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={() => onNavigate('home')}
-            className="flex items-center gap-2.5 rounded-xl px-1 py-1 text-left"
+            className="flex items-center gap-2 rounded-xl px-1 py-0.5 text-left sm:gap-2.5 sm:py-1"
           >
-            <VaakMark className="h-10 w-10 shrink-0" />
+            <VaakMark className="h-8 w-8 shrink-0 sm:h-10 sm:w-10" />
             <span>
-              <span className="block text-lg font-bold tracking-tight leading-none">VAAK</span>
-              <span className="block text-xs font-semibold text-[var(--mv-text-muted)]">
+              <span className="block text-base font-bold tracking-tight leading-none sm:text-lg">VAAK</span>
+              <span className="block text-[11px] font-semibold text-[var(--mv-text-muted)] sm:text-xs">
                 Communication Without Barriers
               </span>
             </span>
@@ -64,7 +64,7 @@ export function TopNav({
           )}
         </div>
 
-        <nav aria-label="Primary" className="flex flex-wrap items-center gap-2">
+        <nav aria-label="Primary" className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = currentScreen === item.id;
@@ -74,13 +74,13 @@ export function TopNav({
                 type="button"
                 aria-current={active ? 'page' : undefined}
                 onClick={() => onNavigate(item.id)}
-                className={`nb-btn inline-flex min-h-10 items-center gap-2 px-3.5 py-2 text-sm font-bold ${
+                className={`nb-btn inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm ${
                   active
                     ? 'bg-[var(--mv-lime)] text-[#151515]'
                     : 'bg-[var(--mv-surface)] text-[var(--mv-text)] hover:bg-[var(--mv-surface-alt)]'
                 }`}
               >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <Icon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
                 <span>{item.label}</span>
               </button>
             );
@@ -92,9 +92,9 @@ export function TopNav({
               data-tour-id="take-tour-btn"
               onClick={onStartTour}
               aria-label="Take a guided product tour"
-              className="nb-btn inline-flex min-h-10 items-center gap-2 bg-[var(--mv-lavender)] px-3.5 py-2 text-sm font-bold text-[#151515]"
+              className="nb-btn inline-flex min-h-9 items-center gap-1.5 bg-[var(--mv-lavender)] px-2.5 py-1.5 text-xs font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm"
             >
-              <Compass className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <Compass className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Take a Tour</span>
             </button>
           )}
@@ -104,7 +104,7 @@ export function TopNav({
             data-tour-id="accessibility-btn"
             onClick={onOpenAccessibility}
             aria-label="Open accessibility settings"
-            className="nb-btn inline-flex min-h-10 items-center gap-2 bg-[var(--mv-pink)] px-3.5 py-2 text-sm font-bold text-[#151515]"
+            className="nb-btn inline-flex min-h-9 items-center gap-1.5 bg-[var(--mv-pink)] px-2.5 py-1.5 text-xs font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm"
           >
             <Accessibility className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Accessibility</span>

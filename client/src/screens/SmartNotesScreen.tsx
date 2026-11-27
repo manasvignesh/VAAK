@@ -253,10 +253,10 @@ export function SmartNotesScreen({
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:py-10">
+    <div className="mx-auto max-w-4xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-4 sm:py-10">
       <header
         data-tour-id="smart-notes-panel"
-        className="nb-card-lg flex flex-wrap items-start justify-between gap-4 bg-[var(--mv-surface)] p-6"
+        className="nb-card-lg flex flex-wrap items-start justify-between gap-3 bg-[var(--mv-surface)] p-4 sm:gap-4 sm:p-6"
       >
         <div>
           <div className="flex flex-wrap items-center gap-2">
