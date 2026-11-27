@@ -6,6 +6,7 @@ interface OnboardingDialogProps {
   open: boolean;
   settings: AccessibilitySettings;
   onSavePreferences: (next: AccessibilitySettings, activateVoiceNow: boolean) => void;
+  onStartTour: (next: AccessibilitySettings) => void;
   onClose: () => void;
 }
 
@@ -13,6 +14,7 @@ export function OnboardingDialog({
   open,
   settings,
   onSavePreferences,
+  onStartTour,
   onClose,
 }: OnboardingDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -139,7 +141,22 @@ export function OnboardingDialog({
           }
           className="nb-btn min-h-11 bg-[var(--mv-surface)] px-4 py-2 font-bold"
         >
-          Continue Visually
+          Skip &amp; Explore
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onStartTour({
+              ...settings,
+              voiceModeEnabled: voiceMode,
+              autoSpeakResponses: autoSpeak,
+              focusMode,
+              onboardingCompleted: true,
+            })
+          }
+          className="nb-btn min-h-11 bg-[var(--mv-lavender)] px-4 py-2 font-bold text-[#151515]"
+        >
+          Take a Quick Tour
         </button>
         <button
           type="button"

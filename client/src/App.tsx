@@ -47,6 +47,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { AccessibilityDrawer } from './components/AccessibilityDrawer';
 import { VoiceCompanionBar, type CompanionTurn } from './components/VoiceCompanionBar';
 import { OnboardingDialog } from './components/OnboardingDialog';
+import { GuidedTour, TOUR_STEPS } from './components/GuidedTour';
 import { HomeScreen } from './screens/HomeScreen';
 import { LiveClassroomScreen } from './screens/LiveClassroomScreen';
 import { StudentParticipationScreen } from './screens/StudentParticipationScreen';
@@ -114,6 +115,9 @@ export function App() {
   const [companionHistory, setCompanionHistory] = useState<CompanionTurn[]>([]);
   const [previousQaAnswer, setPreviousQaAnswer] = useState<string | undefined>(undefined);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
+  const [speakTourEnabled, setSpeakTourEnabled] = useState(false);
   const [noteCursorIndex, setNoteCursorIndex] = useState(0);
   const [screenHistory, setScreenHistory] = useState<ScreenId[]>([]);
 
@@ -905,6 +909,7 @@ export function App() {
 
       const action = routeGlobalVoiceCommand(rawInput, {
         hasPreviousAnswer: Boolean(previousQaAnswer),
+        isTourOpen: tourOpen,
       });
 
       if (!action) {
@@ -912,6 +917,27 @@ export function App() {
           rawInput,
           `I didn't recognize "${rawInput}". Say "What can I do?" to hear available actions on this screen.`
         );
+        return;
+      }
+
+      if (action.type === 'tour_next') {
+        if (tourStepIndex >= TOUR_STEPS.length - 1) {
+          setTourOpen(false);
+          setScreen('home');
+        } else {
+          goToTourStep(tourStepIndex + 1);
+        }
+        return;
+      }
+      if (action.type === 'tour_back') {
+        if (tourStepIndex > 0) {
+          goToTourStep(tourStepIndex - 1);
+        }
+        return;
+      }
+      if (action.type === 'tour_skip') {
+        setTourOpen(false);
+        spokenServiceRef.current.stop();
         return;
       }
 
@@ -1438,6 +1464,83 @@ export function App() {
     }
   };
 
+  const ensureTourDemoSession = useCallback(() => {
+    if (activeSessionRef.current) return;
+    const nowIso = new Date().toISOString();
+    const tourSegments: TranscriptSegment[] = [
+      {
+        id: 'seg-001',
+        sessionId: 'tour-demo',
+        timestampMs: 6000,
+        createdAtIso: nowIso,
+        originalText:
+          'Photosynthesis is the biological process where green plants convert sunlight into chemical energy stored as glucose.',
+        isFinal: true,
+        words: [],
+        hasConfidenceData: false,
+        isBookmarked: true,
+        bookmarkLabel: 'Photosynthesis',
+        languageDetected: 'en',
+      },
+      {
+        id: 'seg-002',
+        sessionId: 'tour-demo',
+        timestampMs: 14000,
+        createdAtIso: nowIso,
+        originalText:
+          'Chlorophyll is the green pigment inside leaf chloroplasts that absorbs light energy for photosynthesis.',
+        isFinal: true,
+        words: [],
+        hasConfidenceData: false,
+        isBookmarked: true,
+        bookmarkLabel: 'Chlorophyll',
+        languageDetected: 'en',
+      },
+    ];
+    const tourSession: ClassroomSession = {
+      id: 'tour-demo',
+      title: 'Photosynthesis (Tour Demo Content)',
+      language: 'multi',
+      createdAtIso: nowIso,
+      durationMs: 20000,
+      isDemo: true,
+      segments: tourSegments,
+      notes: buildDemoStudyNotes('tour-demo', tourSegments),
+    };
+    activeSessionRef.current = tourSession;
+    setActiveSession(tourSession);
+  }, []);
+
+  const goToTourStep = useCallback(
+    (nextIdx: number, speakOverride?: boolean) => {
+      const clamped = Math.max(0, Math.min(TOUR_STEPS.length - 1, nextIdx));
+      const step = TOUR_STEPS[clamped];
+      if (step.requiresDemoSession) {
+        ensureTourDemoSession();
+      }
+      setScreen(step.screen);
+      setTourStepIndex(clamped);
+      const shouldSpeak = speakOverride ?? speakTourEnabled;
+      if (shouldSpeak) {
+        spokenServiceRef.current.speak(
+          `Step ${clamped + 1} of ${TOUR_STEPS.length}. ${step.title}. ${step.description}`,
+          {
+            lang: settings.preferredSpeechLang ?? 'en-IN',
+            rate: settings.speechRate ?? 1.0,
+          }
+        );
+      }
+    },
+    [ensureTourDemoSession, settings.preferredSpeechLang, settings.speechRate, speakTourEnabled]
+  );
+
+  const startGuidedTour = useCallback(() => {
+    setA11yOpen(false);
+    setOnboardingOpen(false);
+    setTourOpen(true);
+    goToTourStep(0);
+  }, [goToTourStep]);
+
   const handleToggleVoiceMode = async () => {
     if (voiceModeEnabled) {
       stopCompanionMic();
@@ -1454,6 +1557,7 @@ export function App() {
         currentScreen={screen}
         onNavigate={(s) => navigateTo(s)}
         onOpenAccessibility={() => setA11yOpen(true)}
+        onStartTour={startGuidedTour}
         isLiveOrDemoActive={recordingState === 'listening' || recordingState === 'reconnecting'}
         isDemoMode={Boolean(activeSession?.isDemo)}
       />
@@ -1721,9 +1825,52 @@ export function App() {
             void handleToggleVoiceMode();
           }
         }}
+        onStartTour={(next) => {
+          updateSettings(next);
+          setOnboardingOpen(false);
+          setTourOpen(true);
+          goToTourStep(0);
+        }}
         onClose={() => {
           updateSettings({ ...settings, onboardingCompleted: true });
           setOnboardingOpen(false);
+        }}
+      />
+
+      <GuidedTour
+        open={tourOpen}
+        stepIndex={tourStepIndex}
+        reducedMotion={Boolean(settings.reducedMotion)}
+        speakTourEnabled={speakTourEnabled}
+        onToggleSpeakTour={() => {
+          const next = !speakTourEnabled;
+          setSpeakTourEnabled(next);
+          if (!next) {
+            spokenServiceRef.current.stop();
+          } else {
+            const step = TOUR_STEPS[tourStepIndex];
+            spokenServiceRef.current.speak(
+              `Step ${tourStepIndex + 1} of ${TOUR_STEPS.length}. ${step.title}. ${step.description}`,
+              {
+                lang: settings.preferredSpeechLang ?? 'en-IN',
+                rate: settings.speechRate ?? 1.0,
+              }
+            );
+          }
+        }}
+        onStepChange={(idx) => goToTourStep(idx)}
+        onSkip={() => {
+          setTourOpen(false);
+          spokenServiceRef.current.stop();
+          updateSettings({ ...settings, onboardingCompleted: true });
+        }}
+        onComplete={(launchDemo) => {
+          setTourOpen(false);
+          spokenServiceRef.current.stop();
+          updateSettings({ ...settings, onboardingCompleted: true });
+          if (launchDemo) {
+            startDemoSession();
+          }
         }}
       />
     </div>

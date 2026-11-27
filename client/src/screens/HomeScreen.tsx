@@ -67,6 +67,7 @@ export function HomeScreen({
           <div className="flex flex-wrap gap-3 pt-1">
             <button
               type="button"
+              data-tour-id="start-live-class"
               onClick={onStartLiveClass}
               className="nb-btn inline-flex min-h-13 items-center gap-2.5 bg-[var(--mv-lime)] px-6 py-3 text-base font-bold text-[#151515]"
             >
@@ -76,6 +77,7 @@ export function HomeScreen({
 
             <button
               type="button"
+              data-tour-id="try-demo"
               onClick={onStartDemo}
               className="nb-btn inline-flex min-h-13 items-center gap-2.5 bg-[var(--mv-lavender)] px-6 py-3 text-base font-bold text-[#151515]"
             >

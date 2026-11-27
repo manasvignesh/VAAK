@@ -83,6 +83,7 @@ export function VoiceCompanionBar({
   return (
     <section
       aria-label="VAAK Voice Companion"
+      data-tour-id="voice-companion-bar"
       className="border-b-[3px] border-[var(--mv-border)] bg-[var(--mv-surface-alt)] px-4 py-2.5"
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-2.5">

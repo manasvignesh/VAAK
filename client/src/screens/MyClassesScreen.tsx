@@ -58,7 +58,10 @@ export function MyClassesScreen({
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 px-4 py-6 sm:py-8">
+    <div
+      data-tour-id="my-classes-panel"
+      className="mx-auto max-w-5xl space-y-5 px-4 py-6 sm:py-8"
+    >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">My Classes Archive</h1>

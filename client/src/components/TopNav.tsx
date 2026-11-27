@@ -1,4 +1,4 @@
-import { Accessibility, BookOpen, FolderOpen, Home, MessageSquare, Radio } from 'lucide-react';
+import { Accessibility, BookOpen, Compass, FolderOpen, Home, MessageSquare, Radio } from 'lucide-react';
 import type { ScreenId } from '../types';
 import { VaakMark } from './VaakMark';
 
@@ -6,6 +6,7 @@ interface TopNavProps {
   currentScreen: ScreenId;
   onNavigate: (screen: ScreenId) => void;
   onOpenAccessibility: () => void;
+  onStartTour?: () => void;
   isLiveOrDemoActive: boolean;
   isDemoMode: boolean;
 }
@@ -14,6 +15,7 @@ export function TopNav({
   currentScreen,
   onNavigate,
   onOpenAccessibility,
+  onStartTour,
   isLiveOrDemoActive,
   isDemoMode,
 }: TopNavProps) {
@@ -84,8 +86,22 @@ export function TopNav({
             );
           })}
 
+          {onStartTour && (
+            <button
+              type="button"
+              data-tour-id="take-tour-btn"
+              onClick={onStartTour}
+              aria-label="Take a guided product tour"
+              className="nb-btn inline-flex min-h-10 items-center gap-2 bg-[var(--mv-lavender)] px-3.5 py-2 text-sm font-bold text-[#151515]"
+            >
+              <Compass className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="hidden sm:inline">Take a Tour</span>
+            </button>
+          )}
+
           <button
             type="button"
+            data-tour-id="accessibility-btn"
             onClick={onOpenAccessibility}
             aria-label="Open accessibility settings"
             className="nb-btn inline-flex min-h-10 items-center gap-2 bg-[var(--mv-pink)] px-3.5 py-2 text-sm font-bold text-[#151515]"

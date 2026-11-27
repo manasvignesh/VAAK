@@ -69,7 +69,10 @@ export function StudentParticipationScreen({
       )}
 
       <div className="grid gap-6 md:grid-cols-5">
-        <div className="nb-card-lg space-y-5 bg-[var(--mv-surface)] p-5 md:col-span-3">
+        <div
+          data-tour-id="participation-pad"
+          className="nb-card-lg space-y-5 bg-[var(--mv-surface)] p-5 md:col-span-3"
+        >
           <div>
             <span className="block text-sm font-bold uppercase tracking-wide">
               Quick Classroom Phrases

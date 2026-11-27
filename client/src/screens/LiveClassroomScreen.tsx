@@ -272,6 +272,7 @@ export function LiveClassroomScreen({
 
           <button
             type="button"
+            data-tour-id="classroom-highlights-catchup"
             onClick={onTriggerCatchMeUp}
             className="nb-btn inline-flex min-h-10 items-center gap-1.5 bg-[var(--mv-pink)] px-3.5 py-1.5 text-sm font-bold text-[#151515]"
           >
@@ -281,6 +282,7 @@ export function LiveClassroomScreen({
 
           <button
             type="button"
+            data-tour-id="focus-mode-btn"
             aria-pressed={isFocusMode}
             onClick={() => onUpdateSettings({ ...settings, focusMode: !isFocusMode })}
             className={`nb-btn inline-flex min-h-10 items-center gap-1.5 px-3.5 py-1.5 text-sm font-bold ${
@@ -396,6 +398,7 @@ export function LiveClassroomScreen({
       {/* Main Layout: Captions First (2/3 width on desktop, full width in Focus Mode) */}
       <div className={`grid gap-4 ${isFocusMode ? '' : 'lg:grid-cols-3'}`}>
         <div
+          data-tour-id="live-captions-panel"
           className={`nb-card-lg flex flex-col bg-[var(--mv-surface)] ${
             isFocusMode ? '' : 'lg:col-span-2'
           }`}
@@ -411,7 +414,7 @@ export function LiveClassroomScreen({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div data-tour-id="translate-controls" className="flex items-center gap-2">
               <label htmlFor="translate-lang-select">Translate to:</label>
               <select
                 id="translate-lang-select"

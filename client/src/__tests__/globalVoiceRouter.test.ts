@@ -42,4 +42,16 @@ describe('routeGlobalVoiceCommand', () => {
       targetLanguage: 'te',
     });
   });
+
+  it('routes Continue, Back, and Skip when the guided tour is open', () => {
+    expect(routeGlobalVoiceCommand('Continue.', { isTourOpen: true })).toEqual({
+      type: 'tour_next',
+    });
+    expect(routeGlobalVoiceCommand('Back.', { isTourOpen: true })).toEqual({
+      type: 'tour_back',
+    });
+    expect(routeGlobalVoiceCommand('Skip tour.', { isTourOpen: true })).toEqual({
+      type: 'tour_skip',
+    });
+  });
 });

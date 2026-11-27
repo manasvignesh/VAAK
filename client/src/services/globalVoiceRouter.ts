@@ -35,7 +35,11 @@ export type GlobalVoiceAction =
   | { type: 'speak_slowly' }
   | { type: 'speak_faster' }
   | { type: 'stop_listening' }
-  | { type: 'cancel' };
+  | { type: 'cancel' }
+  // Guided Tour
+  | { type: 'tour_next' }
+  | { type: 'tour_back' }
+  | { type: 'tour_skip' };
 
 const STRIP_WAKE_PREFIX = /^\s*(?:vaak|vak|voc|my\s*voice|myvoice)[\s,.:;\-–—]+/i;
 
@@ -63,11 +67,24 @@ function parseMinutesWindow(text: string): number | undefined {
  */
 export function routeGlobalVoiceCommand(
   rawInput: string,
-  options: { hasPreviousAnswer?: boolean } = {}
+  options: { hasPreviousAnswer?: boolean; isTourOpen?: boolean } = {}
 ): GlobalVoiceAction | null {
   const cleaned = rawInput.trim().replace(STRIP_WAKE_PREFIX, '').trim().replace(/[.!?]+$/, '');
   if (!cleaned) return null;
   const lower = cleaned.toLowerCase();
+
+  // Guided Tour voice controls when tour is open
+  if (options.isTourOpen) {
+    if (/^(?:continue|next|next\s+step|go\s+on)$/i.test(lower)) {
+      return { type: 'tour_next' };
+    }
+    if (/^(?:back|go\s+back|previous|previous\s+step)$/i.test(lower)) {
+      return { type: 'tour_back' };
+    }
+    if (/^(?:skip|skip\s+tour|close|close\s+tour|exit\s+tour)$/i.test(lower)) {
+      return { type: 'tour_skip' };
+    }
+  }
 
   // Playback & turn control (highest priority)
   if (/^(?:stop|stop\s+speaking|quiet|be\s+quiet)$/i.test(lower)) {
