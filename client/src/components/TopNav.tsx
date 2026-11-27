@@ -74,7 +74,7 @@ export function TopNav({
                 type="button"
                 aria-current={active ? 'page' : undefined}
                 onClick={() => onNavigate(item.id)}
-                className={`nb-btn inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm ${
+                className={`nb-btn inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 text-xs font-bold sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm ${
                   active
                     ? 'bg-[var(--mv-lime)] text-[#151515]'
                     : 'bg-[var(--mv-surface)] text-[var(--mv-text)] hover:bg-[var(--mv-surface-alt)]'
@@ -92,9 +92,9 @@ export function TopNav({
               data-tour-id="take-tour-btn"
               onClick={onStartTour}
               aria-label="Take a guided product tour"
-              className="nb-btn inline-flex min-h-9 items-center gap-1.5 bg-[var(--mv-lavender)] px-2.5 py-1.5 text-xs font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm"
+              className="nb-btn inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 bg-[var(--mv-lavender)] px-3 py-1.5 text-xs font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm"
             >
-              <Compass className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
+              <Compass className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="hidden sm:inline">Take a Tour</span>
             </button>
           )}
@@ -104,7 +104,7 @@ export function TopNav({
             data-tour-id="accessibility-btn"
             onClick={onOpenAccessibility}
             aria-label="Open accessibility settings"
-            className="nb-btn inline-flex min-h-9 items-center gap-1.5 bg-[var(--mv-pink)] px-2.5 py-1.5 text-xs font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm"
+            className="nb-btn inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 bg-[var(--mv-pink)] px-3 py-1.5 text-xs font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm"
           >
             <Accessibility className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Accessibility</span>

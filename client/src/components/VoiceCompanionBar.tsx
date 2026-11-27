@@ -93,7 +93,7 @@ export function VoiceCompanionBar({
               type="button"
               aria-pressed={voiceModeEnabled}
               onClick={onToggleVoiceMode}
-              className={`nb-btn inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 sm:py-1.5 sm:text-xs ${
+              className={`nb-btn inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#151515] sm:min-h-10 sm:gap-2 sm:px-3.5 ${
                 voiceModeEnabled ? 'bg-[var(--mv-lime)]' : 'bg-[var(--mv-surface)] text-[var(--mv-text)]'
               }`}
             >
@@ -209,7 +209,7 @@ export function VoiceCompanionBar({
           />
           <button
             type="submit"
-            className="nb-btn inline-flex min-h-10 items-center gap-1.5 bg-[var(--mv-pink)] px-4 py-1.5 text-xs font-bold text-[#151515]"
+            className="nb-btn inline-flex min-h-11 items-center gap-1.5 bg-[var(--mv-pink)] px-4 py-1.5 text-xs font-bold text-[#151515]"
           >
             <Send className="h-3.5 w-3.5" aria-hidden="true" />
             <span>Send Command</span>
