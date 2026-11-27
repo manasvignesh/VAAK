@@ -23,3 +23,15 @@ GEMINI_FALLBACK_MODEL = "gemini-flash-lite-latest"
 GLOBAL_DAILY_AI_LIMIT = "250"
 GLOBAL_DAILY_AUDIO_MINUTES = "120"
 GLOBAL_MAX_CONCURRENT_WS = "25"
+
+[previews.vars]
+LIVE_SERVICES_ENABLED = "true"
+GEMINI_MODEL = "gemini-flash-latest"
+GEMINI_FALLBACK_MODEL = "gemini-flash-lite-latest"
+GLOBAL_DAILY_AI_LIMIT = "250"
+GLOBAL_DAILY_AUDIO_MINUTES = "120"
+GLOBAL_MAX_CONCURRENT_WS = "25"
+
+[[previews.durable_objects.bindings]]
+name = "QUOTA_GUARD"
+class_name = "QuotaGuardDO"
