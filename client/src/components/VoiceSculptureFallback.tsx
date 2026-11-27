@@ -26,10 +26,10 @@ export function VoiceSculptureFallback({
 
   return (
     <div
+      aria-hidden="true"
       className={`flex items-center justify-center rounded-2xl border-[2.5px] border-[var(--mv-border)] bg-[var(--mv-surface)] shadow-[4px_4px_0px_var(--mv-border)] ${
         compact ? 'h-24 w-24' : 'h-48 w-full sm:h-56'
       }`}
-      aria-label={`Voice state indicator: ${recordingState}`}
     >
       <svg
         viewBox="0 0 120 120"

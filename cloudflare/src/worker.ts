@@ -1,6 +1,11 @@
 import type { AppCapabilities, TranscriptSegment, TranslationLanguage } from '../../shared/types.js';
 import { handleWorkerWebSocket } from './deepgramWorker.js';
-import { generateNotesOnWorker, translateOnWorker, WorkerGeminiError } from './geminiHttp.js';
+import {
+  askLectureOnWorker,
+  generateNotesOnWorker,
+  translateOnWorker,
+  WorkerGeminiError,
+} from './geminiHttp.js';
 import { QuotaGuardDO } from './quotaGuardDO.js';
 import { isLiveEnabled, parsePositiveInt, type Env } from './types.js';
 
@@ -47,7 +52,9 @@ export default {
     }
 
     if (
-      (url.pathname === '/api/translate' || url.pathname === '/api/notes') &&
+      (url.pathname === '/api/translate' ||
+        url.pathname === '/api/notes' ||
+        url.pathname === '/api/ask') &&
       request.method === 'POST'
     ) {
       if (!isLiveEnabled(env)) {
@@ -85,7 +92,38 @@ export default {
 
       try {
         if (url.pathname === '/api/translate') {
+          if (url.pathname === '/api/ask') {
           const body = (await request.json()) as {
+            sessionTitle?: string;
+            question?: string;
+            previousAnswer?: string;
+            segments?: TranscriptSegment[];
+          };
+          if (
+            !body.sessionTitle?.trim() ||
+            !body.question?.trim() ||
+            !Array.isArray(body.segments) ||
+            body.segments.length === 0
+          ) {
+            return Response.json(
+              {
+                error: 'INVALID_REQUEST',
+                message: 'Provide a valid sessionTitle, question, and transcript segments.',
+              },
+              { status: 400 }
+            );
+          }
+          const qa = await askLectureOnWorker(
+            env,
+            body.sessionTitle.trim(),
+            body.question.trim(),
+            body.segments,
+            body.previousAnswer
+          );
+          return Response.json(qa);
+        }
+
+        const body = (await request.json()) as {
             text?: string;
             targetLanguage?: TranslationLanguage;
           };
@@ -108,6 +146,37 @@ export default {
             targetLanguage: body.targetLanguage,
             isDemo: false,
           });
+        }
+
+        if (url.pathname === '/api/ask') {
+          const body = (await request.json()) as {
+            sessionTitle?: string;
+            question?: string;
+            previousAnswer?: string;
+            segments?: TranscriptSegment[];
+          };
+          if (
+            !body.sessionTitle?.trim() ||
+            !body.question?.trim() ||
+            !Array.isArray(body.segments) ||
+            body.segments.length === 0
+          ) {
+            return Response.json(
+              {
+                error: 'INVALID_REQUEST',
+                message: 'Provide a valid sessionTitle, question, and transcript segments.',
+              },
+              { status: 400 }
+            );
+          }
+          const qa = await askLectureOnWorker(
+            env,
+            body.sessionTitle.trim(),
+            body.question.trim(),
+            body.segments,
+            body.previousAnswer
+          );
+          return Response.json(qa);
         }
 
         const body = (await request.json()) as {

@@ -2,7 +2,7 @@ name: MyVoice CI
 
 on:
   push:
-    branches: [main, master, cloudflare-deploy, neo-brutalist-ui]
+    branches: [main, master, cloudflare-deploy, neo-brutalist-ui, voice-accessibility]
   pull_request:
     branches: [main, master]
   workflow_dispatch:

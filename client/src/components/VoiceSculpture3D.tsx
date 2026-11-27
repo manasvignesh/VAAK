@@ -190,10 +190,10 @@ export default function VoiceSculpture3D({
   return (
     <div
       ref={mountRef}
+      aria-hidden="true"
       className={`overflow-hidden rounded-2xl border-[2.5px] border-[var(--mv-border)] bg-[var(--mv-surface)] shadow-[4px_4px_0px_var(--mv-border)] ${
         compact ? 'h-24 w-24 shrink-0' : 'h-48 w-full sm:h-56'
       }`}
-      aria-label={`Interactive 3D voice sculpture: ${recordingState}`}
     />
   );
 }
